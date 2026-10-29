@@ -72,4 +72,17 @@ tasks {
     named("publishPlugin") {
         dependsOn("verifyPlugin")
     }
+
+    // IDEA 2024.2.4 predates Java 25. On startup its bundled Gradle plugin (com.intellij.gradle)
+    // reads JetBrains' current Gradle/JVM compatibility matrix, which now lists Java 25, and
+    // 2024.2.4's JavaVersion.parse("25") throws, provoking a JreHiDpiUtil startup assertion.
+    // SinewSlim needs no Gradle integration, so the runIde sandbox starts with that plugin
+    // disabled (as ~/OfficeFloor-IntelliJ-Plugin does). Remove once platformVersion knows Java 25.
+    named<org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask>("runIde") {
+        doFirst {
+            val config = sandboxConfigDirectory.get().asFile
+            config.mkdirs()
+            config.resolve("disabled_plugins.txt").writeText("com.intellij.gradle\n")
+        }
+    }
 }
