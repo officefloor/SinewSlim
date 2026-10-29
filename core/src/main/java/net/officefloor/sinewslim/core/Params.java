@@ -23,13 +23,15 @@ package net.officefloor.sinewslim.core;
  * @param lockOnAnyField   a field read locks a piece too (otherwise a write, or an own call)
  * @param freeParams       a parameter of the method handed to a piece unchanged costs nothing:
  *                         the framework injects it (function injection)
+ * @param ignoreJumps      a jump leaving a run does not stop it moving: a diagnostic only, to
+ *                         tell a method blocked by its jumps from one blocked by a long statement
  */
 public record Params(int trigger, int target, int minPiece, int minSaving, int maxInputs, int maxOutputs, int softInputs,
 		int inputPremium, int outputWeight, int multiOutputWeight, int pieceCost, boolean trailingReturn,
-		boolean structuralOnly, boolean lockOnAnyField, boolean freeParams) {
+		boolean structuralOnly, boolean lockOnAnyField, boolean freeParams, boolean ignoreJumps) {
 
 	/** SinewSlim's defaults: the study's cap, smaller pieces, a hard limit of five parameters. */
-	public static final Params DEFAULTS = new Params(26, 25, 3, 2, 5, 1, -1, 2, 1, 3, 1, true, false, false, false);
+	public static final Params DEFAULTS = new Params(26, 25, 3, 2, 5, 1, -1, 2, 1, 3, 1, true, false, false, false, false);
 
 	/** The study's defaults ({@code SPLIT.md}, Parameters; {@code split.py}, Params). */
 	public static final Params STUDY = DEFAULTS.toBuilder().minPiece(5).minSaving(3).maxInputs(3).build();
@@ -64,7 +66,7 @@ public record Params(int trigger, int target, int minPiece, int minSaving, int m
 	public static final class Builder {
 		private int trigger, target, minPiece, minSaving, maxInputs, maxOutputs, softInputs, inputPremium, outputWeight,
 				multiOutputWeight, pieceCost;
-		private boolean trailingReturn, structuralOnly, lockOnAnyField, freeParams;
+		private boolean trailingReturn, structuralOnly, lockOnAnyField, freeParams, ignoreJumps;
 
 		private Builder(Params p) {
 			trigger = p.trigger;
@@ -82,6 +84,7 @@ public record Params(int trigger, int target, int minPiece, int minSaving, int m
 			structuralOnly = p.structuralOnly;
 			lockOnAnyField = p.lockOnAnyField;
 			freeParams = p.freeParams;
+			ignoreJumps = p.ignoreJumps;
 		}
 
 		public Builder trigger(int v) {
@@ -159,10 +162,15 @@ public record Params(int trigger, int target, int minPiece, int minSaving, int m
 			return this;
 		}
 
+		public Builder ignoreJumps(boolean v) {
+			ignoreJumps = v;
+			return this;
+		}
+
 		public Params build() {
 			return new Params(trigger, target, minPiece, minSaving, maxInputs, maxOutputs, softInputs, inputPremium,
 					outputWeight, multiOutputWeight, pieceCost, trailingReturn, structuralOnly, lockOnAnyField,
-					freeParams);
+					freeParams, ignoreJumps);
 		}
 	}
 }

@@ -158,7 +158,7 @@ final class Search {
 			Stmt kid = kids.get(i);
 			if (!p.structuralOnly() || kid.kind().structural()) {
 				// a single statement, as it is or reduced from inside, then extracted whole
-				if (Jumps.ok(List.of(kid), p)) {
+				if (p.ignoreJumps() || Jumps.ok(List.of(kid), p)) {
 					Seam sm = m.seam(kid.start(), kid.end());
 					if (sm.feasible(p)) {
 						int w = sm.width(p), c = sm.cost(p);
@@ -186,7 +186,7 @@ final class Search {
 				if (lines < p.minPiece() || lines - 1 < p.minSaving()) {
 					continue;
 				}
-				if (!Jumps.ok(kids.subList(j, i + 1), p)) {
+				if (!p.ignoreJumps() && !Jumps.ok(kids.subList(j, i + 1), p)) {
 					continue;
 				}
 				Seam sm = m.seam(kids.get(j).start(), kid.end());

@@ -1,5 +1,7 @@
 package net.officefloor.sinewslim.core;
 
+import java.util.Locale;
+
 import net.officefloor.sinewslim.core.Assessment.Obstacle;
 import net.officefloor.sinewslim.core.Assessment.Status;
 
@@ -21,7 +23,7 @@ public record Assessor(Params params, boolean records, boolean structural, int p
 	public Assessment assess(MethodFacts facts) {
 		SlimResult best = Slimmer.slim(facts, params);
 		if (!best.applicable()) {
-			return new Assessment(Status.UNDER_CAP, null, best, best, null);
+			return new Assessment(Status.UNDER_CAP, null, null, best, best, null);
 		}
 		SlimResult struct = structural && !params.structuralOnly() ? Slimmer.slim(facts, params.structural()) : null;
 		if (best.feasible()) {
@@ -31,14 +33,21 @@ public record Assessor(Params params, boolean records, boolean structural, int p
 				proposal = struct;
 			}
 			Status status = locked(proposal) ? Status.SLIMMABLE_BUT_LOCKED : Status.SLIMMABLE;
-			return new Assessment(status, null, proposal, best, struct);
+			return new Assessment(status, null, null, proposal, best, struct);
 		}
 		Obstacle obstacle = obstacle(facts);
-		if (records && (obstacle == Obstacle.OUTPUTS) && params.maxOutputs() >= 0) {
+		if (records && obstacle == Obstacle.OUTPUTS) {
 			SlimResult rec = Slimmer.slim(facts, params.records());
-			return new Assessment(Status.SLIMMABLE_WITH_RECORD, obstacle, rec, best, struct);
+			return new Assessment(Status.SLIMMABLE_WITH_RECORD, obstacle, null, rec, best, struct);
 		}
-		return new Assessment(Status.NOT_SLIMMABLE, obstacle, best, best, struct);
+		String detail = null;
+		if (obstacle == Obstacle.LONG_STATEMENT) {
+			detail = longStatement(facts);
+			if (detail == null) {
+				obstacle = Obstacle.LENGTH; // no one statement blocks: the method is simply too long
+			}
+		}
+		return new Assessment(Status.NOT_SLIMMABLE, obstacle, detail, best, best, struct);
 	}
 
 	/** Every piece and the remainder bound to the class: splitting moves nothing out of it. */
@@ -55,10 +64,60 @@ public record Assessor(Params params, boolean records, boolean structural, int p
 		if (inputsLimited && Slimmer.slim(facts, params.unlimitedInputs()).feasible()) {
 			return Obstacle.INPUTS;
 		}
-		if (outputsLimited && inputsLimited
-				&& Slimmer.slim(facts, params.records().toBuilder().maxInputs(-1).build()).feasible()) {
+		Params unlimited = params.toBuilder().maxInputs(-1).maxOutputs(-1).build();
+		if (outputsLimited && inputsLimited && Slimmer.slim(facts, unlimited).feasible()) {
 			return Obstacle.INPUTS_AND_OUTPUTS;
 		}
-		return Obstacle.STRUCTURE;
+		if (Slimmer.slim(facts, unlimited.toBuilder().ignoreJumps(true).build()).feasible()) {
+			return Obstacle.JUMPS;
+		}
+		return Obstacle.LONG_STATEMENT;
+	}
+
+	/**
+	 * The statement that blocks: the longest of the innermost statements longer than the target,
+	 * those with no statement over the target inside them.
+	 */
+	private String longStatement(MethodFacts facts) {
+		MethodIndex m = new MethodIndex(facts, params.freeParams());
+		Stmt[] found = new Stmt[1];
+		int[] lines = new int[1];
+		innermost(facts.body(), m, found, lines);
+		if (found[0] == null) {
+			return null;
+		}
+		Stmt s = found[0];
+		return "the " + name(s.kind()) + " at lines " + s.start() + "-" + s.end() + " (" + lines[0] + " lines)";
+	}
+
+	/** Whether a statement over the target lies in {@code node}; records the longest innermost one. */
+	private boolean innermost(Stmt node, MethodIndex m, Stmt[] found, int[] lines) {
+		boolean inside = false;
+		for (Stmt k : node.kids()) {
+			inside |= innermost(k, m, found, lines);
+		}
+		if (inside || node.seq()) {
+			return inside;
+		}
+		int n = m.lines(node.start(), node.end());
+		if (n <= params.target()) {
+			return false;
+		}
+		if (n > lines[0]) {
+			found[0] = node;
+			lines[0] = n;
+		}
+		return true;
+	}
+
+	private static String name(StmtKind k) {
+		return switch (k) {
+		case OTHER -> "statement";
+		case LOOP -> "loop";
+		case SYNCHRONIZED -> "synchronized block";
+		case LABELED -> "labeled statement";
+		case ENTRY -> "switch entry";
+		default -> k.name().toLowerCase(Locale.ROOT) + " statement";
+		};
 	}
 }

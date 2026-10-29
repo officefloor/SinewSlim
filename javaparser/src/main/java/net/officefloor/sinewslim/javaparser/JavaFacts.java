@@ -350,7 +350,8 @@ public final class JavaFacts {
 
 		MethodFacts facts = new MethodFacts(declLine, tree(body), vars, loops, ownCallLines(decl, own),
 				nloc(decl, name));
-		return new MethodUnit(typeName(decl), name.asString(), signature, declLine, nameLine, endLine(decl), facts);
+		return new MethodUnit(typeName(decl), name.asString(), signature, declLine, nameLine, endLine(decl),
+				annotations(decl), facts);
 	}
 
 	// ------------------------------------------------------------------------------------------
@@ -497,6 +498,19 @@ public final class JavaFacts {
 			for (Node m : members) {
 				if (m instanceof MethodDeclaration md) {
 					out.merge(md.getNameAsString(), !md.isStatic(), Boolean::logicalOr);
+				}
+			}
+		}
+		return out;
+	}
+
+	/** The annotations on the callable and on each type around it, as written ({@code Next}, {@code a.b.Next}). */
+	static List<String> annotations(Node decl) {
+		List<String> out = new ArrayList<>();
+		for (Node p = decl; p != null; p = p.getParentNode().orElse(null)) {
+			if (p instanceof BodyDeclaration<?> bd && (p == decl || p instanceof TypeDeclaration)) {
+				for (AnnotationExpr a : bd.getAnnotations()) {
+					out.add(a.getNameAsString());
 				}
 			}
 		}

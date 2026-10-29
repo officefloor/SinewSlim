@@ -28,7 +28,7 @@ public final class Slimmer {
 		MethodIndex m = new MethodIndex(facts, p.freeParams());
 		int total = facts.length() > 0 ? facts.length() : m.code.length;
 		if (total < p.trigger()) {
-			return new SlimResult(false, true, 0, 0, total, List.of(), false, p);
+			return new SlimResult(false, true, 0, 0, total, List.of(), List.of(), false, p);
 		}
 		Search search = new Search(m, p);
 		// what the search removes is read against the statements it sees; the lines no statement
@@ -41,11 +41,43 @@ public final class Slimmer {
 			}
 		}
 		if (best == null) {
-			return new SlimResult(true, false, SlimResult.INFEASIBLE, SlimResult.INFEASIBLE, total, List.of(), false, p);
+			return new SlimResult(true, false, SlimResult.INFEASIBLE, SlimResult.INFEASIBLE, total, List.of(), List.of(),
+					false, p);
 		}
 		List<Seam> cuts = new ArrayList<>(best.cuts());
 		cuts.sort(cutOrder(p));
 		return new SlimResult(true, true, best.width(), best.cost(), total - (kidsTotal - best.rem()), cuts,
-				m.remainderLocked(cuts, p), p);
+				pieceLines(m, cuts), m.remainderLocked(cuts, p), p);
+	}
+
+	/**
+	 * Each piece's code lines once the pieces directly inside it are out, each of those leaving
+	 * one call line behind.
+	 */
+	static List<Integer> pieceLines(MethodIndex m, List<Seam> cuts) {
+		List<Integer> out = new ArrayList<>(cuts.size());
+		for (Seam outer : cuts) {
+			int lines = m.lines(outer.lo(), outer.hi());
+			for (Seam inner : cuts) {
+				if (inner != outer && inside(inner, outer) && directlyInside(inner, outer, cuts)) {
+					lines -= m.lines(inner.lo(), inner.hi()) - 1;
+				}
+			}
+			out.add(lines);
+		}
+		return out;
+	}
+
+	private static boolean inside(Seam inner, Seam outer) {
+		return outer.lo() <= inner.lo() && inner.hi() <= outer.hi() && !(outer.lo() == inner.lo() && outer.hi() == inner.hi());
+	}
+
+	private static boolean directlyInside(Seam inner, Seam outer, List<Seam> cuts) {
+		for (Seam mid : cuts) {
+			if (mid != inner && mid != outer && inside(inner, mid) && inside(mid, outer)) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

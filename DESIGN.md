@@ -246,26 +246,40 @@ MethodResult
   structural      the structural-only result beside it
 ```
 
-**The reason for NOT_SLIMMABLE** is chosen from what blocked the search, most specific first:
+**The reason for NOT_SLIMMABLE** is found by lifting the limits one at a time and seeing which
+lift makes a segmentation feasible, in this order:
 
-- *every cut carries two results* (outputs, at every candidate seam);
-- *every cut needs more than 5 parameters* (inputs);
-- *the loop at 52–88 cannot be shortened without a second output* (a single statement over
-  the target with no feasible inner reduction);
-- *a `break`/`continue` leaves every candidate run* (jumps);
-- *every piece is locked to the class* (all pieces feasible but every one, and the remainder,
-  writes fields or calls the class's own methods): reported as a god-method warning even
-  though a split exists, because splitting it moves nothing out of the class.
+- *every cut carries two or more results* (outputs): lifting the single return makes it
+  feasible. With `records: true` this is `SLIMMABLE_WITH_RECORD` instead, with the records
+  proposal;
+- *every cut needs more parameters than the limit* (inputs);
+- *every cut carries two or more results or needs more parameters than the limit* (both);
+- *every run that would bring it under the cap has a return, break or continue leaving it*
+  (jumps): feasible only once jumps are ignored. Early-return guard clauses and a `switch` of
+  `return`s are the usual cause;
+- *a single statement is longer than the cap and nothing inside it can move*, naming it: *the
+  switch statement at lines 397–529 (129 lines)*. Usually a `switch` of many short `case`s, none
+  long enough to be a piece;
+- *too long to slim in one pass* (length): no one statement blocks, but the method is so long
+  that even one call line per piece leaves it over the cap. It needs slimming in two levels, or
+  a redesign.
 
-The last one is a status of its own in the report (`SLIMMABLE_BUT_LOCKED`), since the fix is
-the class, not the method.
+On OfficeFloor (October 2026), jumps account for 79 of the 106 not-slimmable methods, so the
+jump rule is the limit that most often decides between a fix and a redesign notice.
+
+A method where every piece and the remainder are locked to the class (each writes fields or
+calls the class's own methods) is a status of its own, `SLIMMABLE_BUT_LOCKED`: reported as a
+god-method warning even though a split exists, because splitting it moves nothing out of the
+class, and the fix is the class, not the method.
 
 ### Performance
 
-The search is per method and independent, so the scan runs methods in parallel on a
-`ForkJoinPool`. The study ran it over every method of the MLCQ corpus in Python; in Java a
-large repository should be dominated by parsing. A per-file cache keyed by the file's blob
-hash (`.sinew-slim/cache/`) lets repeated scans and hooks skip unchanged files.
+The search is per method and independent, so the scan runs files in parallel on a fixed pool
+whose threads have a deep stack (the parser and the search recurse with the code's nesting).
+Parsing dominates: OfficeFloor (3,872 files, 21,994 methods) scans in about 6 seconds,
+mssql-jdbc (299 files) in about 3.5. A per-file cache keyed by the file's blob hash
+(`.sinew-slim/cache/`) would let repeated scans and hooks skip unchanged files; not built,
+since nothing yet needs it.
 
 ## Surface 1 — Scan
 

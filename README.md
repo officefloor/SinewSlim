@@ -5,12 +5,61 @@ cheapest set of statement runs to extract. A run is cheap when little data cross
 Where no run is cheap enough, the method is reported as one to redesign rather than split.
 
 The design, and the plan for the codebase scan, the code-review gate and the IntelliJ plugin, is
-in [DESIGN.md](DESIGN.md). Built so far: **phase 1**, the core and the JavaParser facts.
+in [DESIGN.md](DESIGN.md). Built so far: **phase 1**, the core and the JavaParser facts, and
+**phase 2**, the configuration and the codebase scan.
 
 | Module | What it is |
 |---|---|
 | `core` | the facts model, the seam, the search, the assessment; no dependencies |
 | `javaparser` | the facts of every method in a Java source file, from JavaParser's syntax tree |
+| `config` | `.sinew-slim.yml`: defaults, profiles, validation, the effective-config dump |
+| `cli` | the `sinew-slim` command: `scan`, `baseline`, `config` |
+
+## Scan a codebase
+
+```bash
+./gradlew :cli:fatJar
+java -jar cli/build/libs/sinew-slim.jar scan --repo path/to/repo
+java -jar cli/build/libs/sinew-slim.jar scan --repo path/to/repo --format html --out scan.html
+```
+
+Every method gets one of five verdicts: under the cap, slimmable (with the pieces: their lines,
+inputs, output, what they declare and whether they can be static), slimmable only by returning
+a record, slimmable but every piece bound to the class, or not slimmable, with the reason. The
+not-slimmable list is the one to look into for redesign.
+
+| Option | |
+|---|---|
+| `--format` | `text` (default), `markdown`, `html`, `json` (every method, the contract), `csv`, `sarif` (GitHub code scanning) |
+| `--out FILE` | write the report to a file |
+| `--near N` | list methods under the cap within N lines of it (default 3) |
+| `--config FILE` | the configuration (default `.sinew-slim.yml` at the root, if there) |
+| `--profile study` | start from the study's values instead of SinewSlim's |
+| `--trigger`, `--target`, `--min-piece`, `--max-inputs`, `--soft-inputs`, `--input-premium` | override one value |
+| `--set KEY=VALUE` | override any key, as in the file: `--set framework.annotations=Next` |
+
+`sinew-slim config` prints the effective configuration; `sinew-slim baseline` records every
+method's length and status in `.sinew-slim-baseline.json`. In a git work tree the scan reads the
+files git knows, so `.gitignore` is honoured.
+
+## Configure
+
+`.sinew-slim.yml` at the repository root; every key has a default and an empty file is valid. An
+unknown key or a value out of range is an error naming the key.
+
+```yaml
+trigger: 26              # a method with this many code lines or more is over the cap
+target: 25               # every piece and the remainder must end at this many or fewer
+min_piece: 3             # the smallest run worth extracting
+max_inputs: 5            # a piece needing more parameters is not proposed
+soft_inputs: 3           # each parameter beyond this costs input_premium more
+input_premium: 2
+framework:
+  annotations: [Next]    # classes or methods read as functions a framework calls
+exclude: ["**/generated/**", "**/target/**", "**/build/**"]
+```
+
+The full list, with every default, is what `sinew-slim config` prints.
 
 ```java
 ParsedFile file = JavaFacts.parse("Orders.java", source);
