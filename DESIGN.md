@@ -319,7 +319,8 @@ compare with.
 
 ```bash
 sinew-slim review --mode staged|worktree|range [--base origin/main]
-                  [--format console|markdown|json|sarif] [--enforcement off|warn|block]
+                  [--format console|markdown|json|sarif|github|codequality]
+                  [--enforcement off|warn|block] [--no-ratchet]
 ```
 
 The modes and the plumbing follow ImpactGate (`~/ImpactGate`): `staged` (index against
@@ -328,8 +329,11 @@ The modes and the plumbing follow ImpactGate (`~/ImpactGate`): `staged` (index a
 
 **What it looks at.** Each changed `.java` file is parsed at the head side, and at the base
 side when the file existed. A method is **touched** when a changed hunk overlaps its span.
-Methods are matched across the two sides by class and signature, falling back to name when
-the signature changed. Nothing is said about a method the change did not touch.
+Methods are matched across the two sides by class and signature, falling back to class and name
+when the signature changed, and to the name alone when the class was renamed with its file (a
+fallback is used only when the name is unique on both sides). Nothing is said about a method the
+change did not touch. With no base commit (a repository's first commit), the lengths come from
+`.sinew-slim-baseline.json` when there is one; otherwise every touched method is new.
 
 **What it says**, per touched method:
 
@@ -339,8 +343,14 @@ the signature changed. Nothing is said about a method the change did not touch.
 | under → over | *crossed the cap*, with the proposal | yes |
 | over → longer | *grew from 31 to 38*, with the proposal | yes |
 | over → same or shorter | *still over the cap*, with the proposal, as information | no |
-| any → not slimmable | *cannot be slimmed: {reason}; investigate for redesign* | yes, if it was touched and is over the cap |
 | new method over the cap | *new method over the cap*, with the proposal | yes |
+| over → under | *now under the cap*, as information | no |
+
+A method that cannot be slimmed carries the redesign notice in place of a proposal: *cannot be
+slimmed: {reason}. Investigate for redesign*. It gates as any other method does, by its row
+above: when it crossed the cap, grew, or is new. (The first draft gated on every touched
+method that cannot be slimmed; that breaks the ratchet, since a one-line fix inside an old
+300-line method would fail the build. Under the ratchet it is information until it grows.)
 
 With `ratchet: false`, every touched method over the cap gates. The ratchet is what makes the
 gate survivable on a codebase that already has long methods: nothing that was long before
@@ -367,24 +377,31 @@ sinew-slim: 2 methods over the cap, 1 not slimmable (warn)
 As ImpactGate, with the Java toolchain in place of pip:
 
 - **GitHub Action** (`action.yml`, composite): `actions/setup-java` (Temurin 17), download the
-  released CLI jar (cached by version), run `review --mode range` against the PR base, write
-  the markdown to the job summary, post or update a **sticky PR comment**, and upload SARIF
-  when `code-scanning: true` so the proposals appear as annotations on the PR's lines.
-  Inputs mirror the config keys. `fetch-depth: 0` is required.
+  released jar for the action's own ref (a release asset of the same tag; the release workflow
+  also keeps a rolling `v0` release holding the newest 0.x jar, so `@v0` resolves), or build
+  from source when there is no such release (`@main`, a branch). Then `review --mode range`
+  against the PR base, the markdown to the job summary and a **sticky PR comment**,
+  **annotations** on the touched methods' lines through workflow commands (`--format github`:
+  a warning when it gates, a notice when it does not; no code scanning needed), and SARIF to
+  code scanning when `code-scanning: true`. The `verdict` output is ok, warn or block.
+  `fetch-depth: 0` is required. The repository's own CI runs the action on its PRs (`uses: ./`).
 - **Docker image** `ghcr.io/officefloor/sinew-slim` (Temurin 17 JRE, git,
   `safe.directory '*'`, non-root): the base for GitLab and Jenkins and for anyone without Java.
 - **GitLab** (`ci/gitlab-ci.yml`): merge-request rule, `GIT_DEPTH: 0`, `review --base
-  $CI_MERGE_REQUEST_DIFF_BASE_SHA`, sticky MR note when `GITLAB_TOKEN` is set, report as an
-  artifact; optionally the GitLab code-quality JSON format so findings show in the MR widget.
+  $CI_MERGE_REQUEST_DIFF_BASE_SHA`, sticky MR note when `GITLAB_TOKEN` is set, the markdown as an
+  artifact, and the code-quality report (`--format codequality`) so findings show in the MR
+  widget.
 - **Jenkins** (`ci/Jenkinsfile`): `docker run` the image against
-  `origin/${CHANGE_TARGET:-main}`, archive the report.
+  `origin/${CHANGE_TARGET:-main}`, the report written from standard output on the agent (the
+  container runs unprivileged), archived.
 - **git hook**: `sinew-slim install-hook` writes `.git/hooks/pre-commit` running `review
   --mode staged --format console`. For the pre-commit framework, a `.pre-commit-hooks.yaml`
   entry using `language: docker_image` (pre-commit has no Java language), and a `system`
   entry for teams with the CLI installed.
-- **The CLI itself**: a single shaded jar on GitHub Releases and Maven Central, plus a small
-  launcher script. JVM start-up is the cost a hook feels; a GraalVM native image is the later
-  option if it matters, and the core's lack of reflection keeps that open.
+- **The CLI itself**: a single jar on GitHub Releases, plus the `bin/sinew-slim` launcher
+  (Maven Central later, if a build plugin wants it). JVM start-up is the cost a hook feels (a
+  fifth of a second with nothing staged); a GraalVM native image is the later option if it
+  matters, and the core's lack of reflection keeps that open.
 
 `sinew-slim comment --provider github|gitlab --body-file report.md` posts the sticky comment,
 as ImpactGate's command does.

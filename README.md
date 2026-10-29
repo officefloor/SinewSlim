@@ -5,15 +5,101 @@ cheapest set of statement runs to extract. A run is cheap when little data cross
 Where no run is cheap enough, the method is reported as one to redesign rather than split.
 
 The design, and the plan for the codebase scan, the code-review gate and the IntelliJ plugin, is
-in [DESIGN.md](DESIGN.md). Built so far: **phase 1**, the core and the JavaParser facts, and
-**phase 2**, the configuration and the codebase scan.
+in [DESIGN.md](DESIGN.md). Built so far: phases 1 to 3, the core, the codebase scan, and the
+code-review gate (git hook, GitHub Action, GitLab, Jenkins, Docker). The IntelliJ plugin is next.
 
 | Module | What it is |
 |---|---|
 | `core` | the facts model, the seam, the search, the assessment; no dependencies |
 | `javaparser` | the facts of every method in a Java source file, from JavaParser's syntax tree |
 | `config` | `.sinew-slim.yml`: defaults, profiles, validation, the effective-config dump |
-| `cli` | the `sinew-slim` command: `scan`, `baseline`, `config` |
+| `cli` | the `sinew-slim` command: `scan`, `review`, `comment`, `install-hook`, `baseline`, `config` |
+
+## Review a change
+
+`sinew-slim review` looks only at the methods a change touches. For each one that crosses the cap,
+grows while over it, or is new and over it, it gives the proposal; for each that cannot be
+slimmed, the redesign notice. A method that was already long and did not grow is information,
+never a failure (the ratchet), so the gate can be switched on in a codebase that already has
+long methods.
+
+```bash
+sinew-slim review                                  # the commit about to be made (staged)
+sinew-slim review --mode worktree                  # uncommitted edits
+sinew-slim review --mode range --base origin/main  # a branch, for CI
+```
+
+```
+src/main/java/acme/Orders.java:48: Orders.place(Request) crossed the cap: 21 -> 31 lines; slimmable at cost 1 (1 piece, remainder 7 lines)
+  lines 52-76   25 lines  in: session  out: -  static  saves 24
+  remainder 7 lines (was 31)
+sinew-slim: 1 method touched in 1 file against HEAD; 1 over the cap and newly so or longer (warn)
+```
+
+Exit codes: `0` ok or warn, `2` blocked (with `enforcement: block`), `1` an error. Formats:
+`console` (the default; every finding starts `path:line:`, which IDE terminals link), `markdown`
+(a PR comment), `json`, `sarif`, `github` (Actions annotations) and `codequality` (GitLab).
+`--no-ratchet` gates on every touched method over the cap.
+
+### As a git hook
+
+```bash
+sinew-slim install-hook          # .git/hooks/pre-commit: reviews the staged change on each commit
+```
+
+Under `enforcement: warn` (the default) it prints and the commit goes ahead; under `block` a
+commit that grows a method over the cap is stopped (`git commit --no-verify` skips it once). For
+the [pre-commit](https://pre-commit.com) framework:
+
+```yaml
+repos:
+  - repo: https://github.com/officefloor/SinewSlim
+    rev: v0.1.0
+    hooks:
+      - id: sinew-slim            # the Docker image; or sinew-slim-system for one on the PATH
+```
+
+### In GitHub Actions
+
+```yaml
+name: sinew-slim
+on: pull_request
+permissions:
+  contents: read
+  pull-requests: write            # for the sticky PR comment
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0          # the base branch and the merge base
+      - uses: officefloor/SinewSlim@v0
+        with:
+          enforcement: warn       # block when ready
+```
+
+The review goes to the job summary, a sticky PR comment (one, updated each run) and annotations
+on the touched methods' lines. `code-scanning: true` also uploads SARIF (needs
+`security-events: write`). The `verdict` output is `ok`, `warn` or `block`.
+
+### In GitLab CI and Jenkins
+
+[`ci/gitlab-ci.yml`](ci/gitlab-ci.yml) runs on merge-request pipelines with the published image,
+posts a sticky MR note when a `GITLAB_TOKEN` (api scope) is set, and feeds the merge request's
+code quality widget:
+
+```yaml
+include:
+  - remote: 'https://raw.githubusercontent.com/officefloor/SinewSlim/v0/ci/gitlab-ci.yml'
+```
+
+[`ci/Jenkinsfile`](ci/Jenkinsfile) runs the image against `origin/${CHANGE_TARGET:-main}` and
+archives the report. The image is `ghcr.io/officefloor/sinew-slim`:
+
+```bash
+docker run --rm -v "$PWD:/repo" ghcr.io/officefloor/sinew-slim:0 review --mode range --base origin/main
+```
 
 ## Scan a codebase
 

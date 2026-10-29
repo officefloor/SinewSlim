@@ -70,19 +70,34 @@ public final class Describe {
 
 	/** The one-line verdict for a method over the cap. */
 	public static String verdict(MethodReport m) {
+		return m.length() + " lines; " + assessment(m);
+	}
+
+	/** The verdict without the length, for where the length is already said (the review's movement). */
+	public static String assessment(MethodReport m) {
 		SlimResult r = m.proposal();
 		String pieces = r.pieces() + " piece" + (r.pieces() == 1 ? "" : "s");
 		return switch (m.status()) {
-		case UNDER_CAP -> m.length() + " lines; " + m.headroom() + (m.headroom() == 1 ? " line" : " lines") + " from the cap";
-		case SLIMMABLE -> m.length() + " lines; slimmable at cost " + r.width() + " (" + pieces + ", remainder "
-				+ r.remainder() + " lines)";
-		case SLIMMABLE_WITH_RECORD -> m.length() + " lines; slimmable only by returning a record (cost " + r.width()
-				+ ", " + pieces + "): " + m.assessment().reason();
-		case SLIMMABLE_BUT_LOCKED -> m.length() + " lines; slimmable at cost " + r.width() + " (" + pieces
+		case UNDER_CAP -> m.headroom() + (m.headroom() == 1 ? " line" : " lines") + " from the cap";
+		case SLIMMABLE -> "slimmable at cost " + r.width() + " (" + pieces + ", remainder " + r.remainder() + " lines)";
+		case SLIMMABLE_WITH_RECORD -> "slimmable only by returning a record (cost " + r.width() + ", " + pieces + "): "
+				+ m.assessment().reason();
+		case SLIMMABLE_BUT_LOCKED -> "slimmable at cost " + r.width() + " (" + pieces
 				+ "), but every piece stays bound to the class: the class, not the method, is the problem";
-		case NOT_SLIMMABLE -> m.length() + " lines; cannot be slimmed: " + m.assessment().reason()
-				+ ". Investigate for redesign";
+		case NOT_SLIMMABLE -> "cannot be slimmed: " + m.assessment().reason() + ". Investigate for redesign";
 		};
+	}
+
+	/** A proposal as plain lines, one per piece and one for the remainder, as the terminal shows it. */
+	public static List<String> proposalLines(MethodReport m, boolean parameteriseFieldReads) {
+		List<String> out = new ArrayList<>();
+		for (Piece p : pieces(m.proposal(), parameteriseFieldReads)) {
+			out.add(String.format("lines %d-%d  %3d lines  in: %s%s  out: %s%s  %s  saves %d", p.lo(), p.hi(), p.lines(),
+					list(p.inputs()), p.passed().isEmpty() ? "" : "  passed: " + list(p.passed()), outputs(p.outputs()),
+					p.moved().isEmpty() ? "" : "  declares: " + list(p.moved()), p.binding(), p.saves()));
+		}
+		out.add("remainder " + remainder(m));
+		return out;
 	}
 
 	/** What the remainder of a proposal is, against what the method was. */

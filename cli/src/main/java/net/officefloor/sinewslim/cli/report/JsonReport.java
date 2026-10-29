@@ -18,9 +18,9 @@ import net.officefloor.sinewslim.core.SlimResult;
  * The contract: every method, every piece and the parameters it was read under, in a versioned
  * schema ({@link ScanReport#SCHEMA}). The other formats and later tools read this.
  */
-final class JsonReport implements ReportWriter {
+public final class JsonReport implements ReportWriter {
 
-	static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+	public static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
 	@Override
 	public void write(ScanReport r, int near, Appendable out) throws IOException {
@@ -76,7 +76,7 @@ final class JsonReport implements ReportWriter {
 		return doc;
 	}
 
-	static Map<String, Object> method(MethodReport m, boolean parameteriseFieldReads) {
+	public static Map<String, Object> method(MethodReport m, boolean parameteriseFieldReads) {
 		Map<String, Object> o = new LinkedHashMap<>();
 		o.put("path", m.path());
 		o.put("type", m.type());

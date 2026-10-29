@@ -8,11 +8,11 @@ import java.util.regex.Pattern;
  * {@code **}{@code /} matches no directory or any number of them, {@code **} anything,
  * {@code *} anything within one name, {@code ?} one character.
  */
-final class Glob {
+public final class Glob {
 
 	private final Pattern pattern;
 
-	Glob(String glob) {
+	public Glob(String glob) {
 		StringBuilder b = new StringBuilder();
 		for (int i = 0; i < glob.length(); i++) {
 			char c = glob.charAt(i);
@@ -35,12 +35,12 @@ final class Glob {
 		pattern = Pattern.compile(b.toString());
 	}
 
-	boolean matches(String path) {
+	public boolean matches(String path) {
 		return pattern.matcher(path).matches();
 	}
 
 	/** Whether a path is included by any of {@code include} and excluded by none of {@code exclude}. */
-	static boolean selected(String path, List<Glob> include, List<Glob> exclude) {
+	public static boolean selected(String path, List<Glob> include, List<Glob> exclude) {
 		boolean in = false;
 		for (Glob g : include) {
 			if (g.matches(path)) {

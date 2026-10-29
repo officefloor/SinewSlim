@@ -13,7 +13,7 @@ import net.officefloor.sinewslim.core.Assessment.Status;
  * the method's lines. A method that cannot be slimmed, or that is bound to its class, is a
  * warning; one that can be slimmed is a note carrying its proposal.
  */
-final class SarifReport implements ReportWriter {
+public final class SarifReport implements ReportWriter {
 
 	record Rule(String id, Status status, String name, String level, String text) {
 	}
@@ -30,6 +30,15 @@ final class SarifReport implements ReportWriter {
 
 	@Override
 	public void write(ScanReport r, int near, Appendable out) throws IOException {
+		write(r.methods(), r.version(), r.config().parameteriseFieldReads(), m -> "", out);
+	}
+
+	/**
+	 * SARIF for any list of methods: a result for each one over the cap, its message opened by
+	 * {@code lead} (the review says how the change moved it).
+	 */
+	public static void write(List<MethodReport> methods, String version, boolean parameteriseFieldReads,
+			java.util.function.Function<MethodReport, String> lead, Appendable out) throws IOException {
 		List<Object> rules = new ArrayList<>();
 		for (Rule rule : RULES) {
 			Map<String, Object> o = new LinkedHashMap<>();
@@ -41,14 +50,14 @@ final class SarifReport implements ReportWriter {
 			rules.add(o);
 		}
 		List<Object> results = new ArrayList<>();
-		for (MethodReport m : r.methods()) {
+		for (MethodReport m : methods) {
 			Rule rule = RULES.stream().filter(x -> x.status() == m.status()).findFirst().orElse(null);
 			if (rule == null) {
 				continue;
 			}
-			StringBuilder text = new StringBuilder(m.qualified() + ": " + Describe.verdict(m) + ".");
+			StringBuilder text = new StringBuilder(lead.apply(m) + m.qualified() + ": " + Describe.verdict(m) + ".");
 			if (m.proposal().feasible()) {
-				for (Describe.Piece p : Describe.pieces(m.proposal(), r.config().parameteriseFieldReads())) {
+				for (Describe.Piece p : Describe.pieces(m.proposal(), parameteriseFieldReads)) {
 					text.append(String.format("%nlines %d-%d (%d lines): in %s, out %s, %s", p.lo(), p.hi(), p.lines(),
 							Describe.list(concat(p.inputs(), p.passed())), Describe.outputs(p.outputs()), p.binding()));
 				}
@@ -70,7 +79,7 @@ final class SarifReport implements ReportWriter {
 		}
 		Map<String, Object> driver = new LinkedHashMap<>();
 		driver.put("name", "sinew-slim");
-		driver.put("version", r.version());
+		driver.put("version", version);
 		driver.put("informationUri", "https://github.com/officefloor/SinewSlim");
 		driver.put("rules", rules);
 		Map<String, Object> run = new LinkedHashMap<>();

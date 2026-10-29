@@ -1,0 +1,12 @@
+#!/bin/sh
+# sinew-slim launcher: runs the jar beside it (lib/sinew-slim.jar in an install, the build
+# output in a checkout). Needs Java 17 or later on the PATH, or JAVA_HOME set.
+here="$(cd "$(dirname "$0")" && pwd)"
+for jar in "$here/../lib/sinew-slim.jar" "$here/../cli/build/libs/sinew-slim.jar" "/opt/sinew-slim/sinew-slim.jar"; do
+  if [ -f "$jar" ]; then
+    if [ -n "$JAVA_HOME" ]; then java="$JAVA_HOME/bin/java"; else java=java; fi
+    exec "$java" $SINEW_SLIM_JAVA_OPTS -jar "$jar" "$@"
+  fi
+done
+echo "sinew-slim: cannot find sinew-slim.jar next to $0" >&2
+exit 1

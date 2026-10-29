@@ -1,0 +1,38 @@
+// sinew-slim: Jenkins pipeline snippet.
+//
+// Reviews a change against its target branch with the published image: a proposal for every
+// touched method over the length cap, a redesign notice for each one that cannot be slimmed.
+// Needs an agent with Docker and a full clone (Jenkins clones fully by default). With
+// enforcement: block in .sinew-slim.yml the stage fails when a touched method crosses the cap or
+// grows over it.
+//
+// The image's entrypoint is sinew-slim, so it runs with `docker run` rather than docker.inside. The report goes to
+// standard output and is written on the agent, since the container runs as an unprivileged user.
+// CHANGE_TARGET is set by multibranch jobs for change requests; it falls back to main. Posting
+// the review to the PR or MR is left to your SCM integration; to post it with sinew-slim, run
+// `sinew-slim comment` in the container with the provider's token and environment set (see
+// action.yml and ci/gitlab-ci.yml for the variables each provider needs).
+
+pipeline {
+  agent any
+  stages {
+    stage('sinew-slim') {
+      steps {
+        sh '''
+          set +e   # report a blocking verdict, then gate at the end
+          docker run --rm -v "$PWD:/repo" ghcr.io/officefloor/sinew-slim:0 \
+            review --mode range --base "origin/${CHANGE_TARGET:-main}" \
+            --format markdown > sinew-slim.md
+          code=$?
+          cat sinew-slim.md
+          exit $code
+        '''
+      }
+    }
+  }
+  post {
+    always {
+      archiveArtifacts artifacts: 'sinew-slim.md', allowEmptyArchive: true
+    }
+  }
+}

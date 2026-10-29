@@ -3,7 +3,7 @@ subprojects {
     apply(plugin = "java-library")
 
     group = "net.officefloor.sinewslim"
-    version = "0.1.0-SNAPSHOT"
+    version = rootProject.property("version") as String
 
     repositories {
         mavenCentral()

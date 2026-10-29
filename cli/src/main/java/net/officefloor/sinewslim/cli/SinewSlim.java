@@ -37,13 +37,21 @@ import picocli.CommandLine.Option;
  */
 @Command(name = "sinew-slim", mixinStandardHelpOptions = true, versionProvider = SinewSlim.Version.class,
 		description = "Slims Java methods over the length cap at the seams where the least data crosses.",
-		subcommands = { SinewSlim.Scan.class, SinewSlim.Baseline.class, SinewSlim.ShowConfig.class })
+		subcommands = { SinewSlim.Scan.class, ReviewCommand.class, CommentCommand.class, InstallHookCommand.class,
+				SinewSlim.Baseline.class, SinewSlim.ShowConfig.class })
 public final class SinewSlim implements Callable<Integer> {
 
 	public static final int OK = 0, ERROR = 1, BLOCKED = 2;
 
-	public static void main(String[] args) {
-		System.exit(run(args));
+	/** The parser and the search recurse with the code's nesting: the whole command runs on a deep stack. */
+	static final long STACK_BYTES = 256L * 1024 * 1024;
+
+	public static void main(String[] args) throws InterruptedException {
+		int[] code = { ERROR };
+		Thread t = new Thread(null, () -> code[0] = run(args), "sinew-slim", STACK_BYTES);
+		t.start();
+		t.join();
+		System.exit(code[0]);
 	}
 
 	static int run(String... args) {
@@ -80,7 +88,13 @@ public final class SinewSlim implements Callable<Integer> {
 
 	static Writer output(Path out) throws IOException {
 		if (out == null) {
-			return new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
+			// standard output is flushed, never closed: the command may write again, and so may a test
+			return new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)) {
+				@Override
+				public void close() {
+					flush();
+				}
+			};
 		}
 		if (out.toAbsolutePath().getParent() != null) {
 			Files.createDirectories(out.toAbsolutePath().getParent());

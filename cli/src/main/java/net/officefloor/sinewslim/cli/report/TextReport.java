@@ -90,12 +90,8 @@ final class TextReport implements ReportWriter {
 	}
 
 	static void proposal(Appendable out, MethodReport m, String indent, boolean pfr) throws IOException {
-		for (Describe.Piece p : Describe.pieces(m.proposal(), pfr)) {
-			out.append(String.format("%slines %d-%d  %3d lines  in: %s%s  out: %s%s  %s  saves %d%n", indent, p.lo(), p.hi(),
-					p.lines(), Describe.list(p.inputs()), p.passed().isEmpty() ? "" : "  passed: " + Describe.list(p.passed()),
-					Describe.outputs(p.outputs()), p.moved().isEmpty() ? "" : "  declares: " + Describe.list(p.moved()),
-					p.binding(), p.saves()));
+		for (String line : Describe.proposalLines(m, pfr)) {
+			out.append(indent).append(line).append(System.lineSeparator());
 		}
-		out.append(indent).append("remainder ").append(Describe.remainder(m)).append(System.lineSeparator());
 	}
 }

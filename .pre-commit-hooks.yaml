@@ -1,0 +1,27 @@
+# pre-commit framework hooks (https://pre-commit.com). Add to a project's .pre-commit-config.yaml:
+#
+#   repos:
+#     - repo: https://github.com/officefloor/SinewSlim
+#       rev: v0.1.0
+#       hooks:
+#         - id: sinew-slim            # runs the published Docker image
+#         # - id: sinew-slim-system   # or a sinew-slim already on the PATH
+#
+# Each reviews the staged change. Under warn (the default) it reports and never stops a commit;
+# with enforcement: block in .sinew-slim.yml a commit that grows a method over the cap is stopped.
+- id: sinew-slim
+  name: sinew-slim
+  description: Review the methods the staged change touches against the length cap.
+  language: docker_image
+  entry: ghcr.io/officefloor/sinew-slim:0 review --mode staged
+  pass_filenames: false
+  always_run: true
+  require_serial: true
+- id: sinew-slim-system
+  name: sinew-slim
+  description: Review the methods the staged change touches against the length cap (sinew-slim on the PATH).
+  language: system
+  entry: sinew-slim review --mode staged
+  pass_filenames: false
+  always_run: true
+  require_serial: true

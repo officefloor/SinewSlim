@@ -1,0 +1,125 @@
+name: "sinew-slim"
+description: "Review the methods a pull request touches: slim each one over the length cap at its cheapest seams, and flag the ones to redesign."
+branding:
+  icon: "minimize-2"
+  color: "green"
+
+inputs:
+  mode:
+    description: "What to review: range (the PR against its base, the default), staged or worktree."
+    default: "range"
+  base:
+    description: "The base ref for range mode. Defaults to the PR's base branch (origin/<base_ref>)."
+    default: ""
+  enforcement:
+    description: "warn (report only, the default), block (fail the job when a touched method crosses the cap or grows over it) or off."
+    default: ""
+  ratchet:
+    description: "true (the default): gate only on growth. false: gate on every touched method over the cap."
+    default: ""
+  config:
+    description: "Path to a .sinew-slim.yml (default: the repository root's, if there)."
+    default: ""
+  working-directory:
+    description: "The repository to review."
+    default: "."
+  comment:
+    description: "Post the review as a sticky PR comment (needs pull-requests: write)."
+    default: "true"
+  annotations:
+    description: "Annotate the touched methods' lines in the PR with workflow commands."
+    default: "true"
+  code-scanning:
+    description: "Also upload SARIF to code scanning (needs security-events: write; code scanning enabled on the repository)."
+    default: "false"
+  version:
+    description: "The sinew-slim release to run (default: this action's own ref; built from source when there is no such release)."
+    default: ""
+  github-token:
+    description: "Token to post the PR comment with. Defaults to the workflow token."
+    default: ""
+
+outputs:
+  verdict:
+    description: "ok, warn or block."
+    value: ${{ steps.review.outputs.verdict }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-java@v5
+      with:
+        distribution: "temurin"
+        java-version: "17"
+
+    - name: Get sinew-slim
+      shell: bash
+      env:
+        REF: ${{ inputs.version || github.action_ref }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        dir="$RUNNER_TEMP/sinew-slim"
+        mkdir -p "$dir"
+        if [ -n "$REF" ] && curl -fsSL -o "$dir/sinew-slim.jar" \
+            "https://github.com/officefloor/SinewSlim/releases/download/$REF/sinew-slim.jar"; then
+          echo "sinew-slim: release $REF"
+        else
+          echo "sinew-slim: no release for '${REF}', building from source"
+          (cd "$ACTION_PATH" && ./gradlew --no-daemon --console=plain -q :cli:fatJar)
+          cp "$ACTION_PATH/cli/build/libs/sinew-slim.jar" "$dir/sinew-slim.jar"
+        fi
+        echo "SINEW_SLIM_JAR=$dir/sinew-slim.jar" >> "$GITHUB_ENV"
+
+    - name: Review
+      id: review
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_BASE: ${{ inputs.base }}
+        INPUT_ENFORCEMENT: ${{ inputs.enforcement }}
+        INPUT_RATCHET: ${{ inputs.ratchet }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        INPUT_ANNOTATIONS: ${{ inputs.annotations }}
+        INPUT_CODE_SCANNING: ${{ inputs.code-scanning }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
+      run: |
+        set +e     # do not stop on a blocking verdict: report it, then gate at the end
+        slim() { java -jar "$SINEW_SLIM_JAR" "$@"; }
+        BASE="$INPUT_BASE"
+        if [ -z "$BASE" ]; then
+          if [ -n "$GITHUB_BASE_REF" ]; then BASE="origin/$GITHUB_BASE_REF"; else BASE="origin/$DEFAULT_BRANCH"; fi
+        fi
+        args=(review --repo . --mode "$INPUT_MODE" --base "$BASE")
+        if [ -n "$INPUT_ENFORCEMENT" ]; then args+=(--enforcement "$INPUT_ENFORCEMENT"); fi
+        if [ "$INPUT_RATCHET" = "false" ]; then args+=(--no-ratchet); fi
+        if [ -n "$INPUT_CONFIG" ]; then args+=(--config "$INPUT_CONFIG"); fi
+
+        report="$RUNNER_TEMP/sinew-slim.md"
+        slim "${args[@]}" --format markdown --out "$report"
+        code=$?
+        if [ "$code" = 1 ]; then exit 1; fi
+        if [ -f "$report" ]; then cat "$report" >> "$GITHUB_STEP_SUMMARY"; fi
+
+        if [ "$INPUT_ANNOTATIONS" = "true" ]; then slim "${args[@]}" --format github; fi
+        if [ "$INPUT_CODE_SCANNING" = "true" ]; then
+          slim "${args[@]}" --format sarif --out "$RUNNER_TEMP/sinew-slim.sarif"
+        fi
+        if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ "$INPUT_COMMENT" = "true" ] && [ -f "$report" ]; then
+          slim comment --body-file "$report" \
+            || echo "::warning::sinew-slim could not post the PR comment. Grant 'pull-requests: write' to the workflow."
+        fi
+        if [ "$code" = 2 ]; then echo "verdict=block" >> "$GITHUB_OUTPUT";
+        elif grep -q '^\*\*warn\*\*' "$report" 2>/dev/null; then echo "verdict=warn" >> "$GITHUB_OUTPUT";
+        else echo "verdict=ok" >> "$GITHUB_OUTPUT"; fi
+        exit "$code"
+
+    - name: Upload SARIF
+      if: always() && inputs.code-scanning == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ runner.temp }}/sinew-slim.sarif
+        category: sinew-slim
