@@ -3,6 +3,7 @@ package net.officefloor.sinewslim.cli.report;
 import java.io.IOException;
 import java.util.List;
 
+import net.officefloor.sinewslim.core.Pieces;
 import net.officefloor.sinewslim.core.Assessment.Status;
 
 /** One self-contained page: no external files, light and dark, a filter box over the method lists. */
@@ -123,7 +124,7 @@ final class HtmlReport implements ReportWriter {
 			if (m.proposal().feasible()) {
 				out.append("<table><tr><th>Lines</th><th class=\"n\">Length</th><th>In</th><th>Out</th><th>Declares</th>"
 						+ "<th>Where</th><th class=\"n\">Saves</th></tr>");
-				for (Describe.Piece p : Describe.pieces(m.proposal(), pfr)) {
+				for (Pieces.Piece p : Describe.pieces(m.proposal(), pfr)) {
 					String in = Describe.list(p.inputs())
 							+ (p.passed().isEmpty() ? "" : " (passed: " + Describe.list(p.passed()) + ")");
 					out.append("<tr><td>").append(p.lo() + "&ndash;" + p.hi()).append("</td><td class=\"n\">")

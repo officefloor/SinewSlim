@@ -1,0 +1,44 @@
+<idea-plugin>
+    <id>net.officefloor.sinewslim</id>
+    <name>SinewSlim</name>
+    <vendor email="daniel@sagenschneider.net" url="https://officefloor.net">OfficeFloor</vendor>
+
+    <description><![CDATA[
+        <p>Slims Java methods that have grown past the length cap (26 code lines or more) at the
+        seams where the least data crosses.</p>
+        <ul>
+          <li>Every method over the cap is marked on its name and in the gutter, with its verdict:
+          slimmable, slimmable only by returning a record, bound to its class, or not slimmable
+          (to be investigated for redesign).</li>
+          <li>Click the gutter mark, or Alt+Enter <b>Slim this method</b>, to see the proposal over
+          the method: each piece highlighted, with what it takes and returns.</li>
+          <li><b>Extract&hellip;</b> asks for one thing, the new method's name, and extracts the piece
+          through the IDE's own Extract Method. <b>Skip</b> leaves a piece out and solves again.</li>
+        </ul>
+        <p>The configuration is the project's <code>.sinew-slim.yml</code>, shared with the
+        <a href="https://github.com/officefloor/SinewSlim">command line, the git hook and CI</a>, so
+        the IDE and the build always agree about a method.</p>
+    ]]></description>
+
+    <change-notes><![CDATA[
+        <ul><li><b>0.1.0</b>: the inspection, the gutter mark, the proposal overlay, and extraction
+        with only the name asked for.</li></ul>
+    ]]></change-notes>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <localInspection language="JAVA" shortName="SinewSlim" displayName="Method over the length cap (SinewSlim)"
+                         groupName="SinewSlim" enabledByDefault="true" level="WEAK WARNING"
+                         implementationClass="net.officefloor.sinewslim.intellij.SlimInspection"/>
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="net.officefloor.sinewslim.intellij.SlimLineMarkerProvider"/>
+        <intentionAction>
+            <language>JAVA</language>
+            <className>net.officefloor.sinewslim.intellij.SlimIntention</className>
+            <category>SinewSlim</category>
+        </intentionAction>
+        <notificationGroup id="SinewSlim" displayType="BALLOON"/>
+    </extensions>
+</idea-plugin>

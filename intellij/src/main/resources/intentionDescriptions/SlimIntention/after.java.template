@@ -1,0 +1,4 @@
+int place(Request request) {
+  Session session = openSession(request);
+  return <spot>finish(session)</spot>;
+}

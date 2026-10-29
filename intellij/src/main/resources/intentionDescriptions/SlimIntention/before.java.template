@@ -1,0 +1,3 @@
+int place(Request request) {
+  <spot>// thirty lines of steps</spot>
+}

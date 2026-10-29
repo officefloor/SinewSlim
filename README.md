@@ -5,8 +5,8 @@ cheapest set of statement runs to extract. A run is cheap when little data cross
 Where no run is cheap enough, the method is reported as one to redesign rather than split.
 
 The design, and the plan for the codebase scan, the code-review gate and the IntelliJ plugin, is
-in [DESIGN.md](DESIGN.md). Built so far: phases 1 to 3, the core, the codebase scan, and the
-code-review gate (git hook, GitHub Action, GitLab, Jenkins, Docker). The IntelliJ plugin is next.
+in [DESIGN.md](DESIGN.md). Built so far: phases 1 to 4, the core, the codebase scan, the
+code-review gate (git hook, GitHub Action, GitLab, Jenkins, Docker) and the IntelliJ plugin.
 
 | Module | What it is |
 |---|---|
@@ -14,6 +14,7 @@ code-review gate (git hook, GitHub Action, GitLab, Jenkins, Docker). The Intelli
 | `javaparser` | the facts of every method in a Java source file, from JavaParser's syntax tree |
 | `config` | `.sinew-slim.yml`: defaults, profiles, validation, the effective-config dump |
 | `cli` | the `sinew-slim` command: `scan`, `review`, `comment`, `install-hook`, `baseline`, `config` |
+| `intellij` | the IntelliJ plugin: the inspection, the gutter mark, the proposal overlay, extraction |
 
 ## Review a change
 
@@ -127,6 +128,22 @@ not-slimmable list is the one to look into for redesign.
 `sinew-slim config` prints the effective configuration; `sinew-slim baseline` records every
 method's length and status in `.sinew-slim-baseline.json`. In a git work tree the scan reads the
 files git knows, so `.gitignore` is honoured.
+
+## In IntelliJ
+
+The plugin marks every method over the cap on its name and in the gutter, with its verdict. Click
+the gutter mark, or Alt+Enter **Slim this method**, and the proposal is drawn over the method:
+each piece highlighted, with what it takes and returns and two buttons. **Extract…** asks for
+one thing, the new method's name, and extracts the piece through the IDE's own Extract Method,
+moving any literal declarations into it first; **Skip** leaves the piece out and solves again.
+It reads the project's `.sinew-slim.yml`, so it agrees with the hook and CI about every method.
+
+```bash
+./gradlew :intellij:buildPlugin     # intellij/build/distributions/sinew-slim-0.1.0.zip: Settings > Plugins > Install from Disk
+./gradlew :intellij:runIde          # or try it in a sandbox IDE
+```
+
+IntelliJ IDEA 2024.2 or later, Community or Ultimate.
 
 ## Configure
 

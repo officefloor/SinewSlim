@@ -1,3 +1,3 @@
 rootProject.name = "sinew-slim"
 
-include("core", "javaparser", "config", "cli")
+include("core", "javaparser", "config", "cli", "intellij")

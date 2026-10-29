@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import net.officefloor.sinewslim.core.Pieces;
 import net.officefloor.sinewslim.cli.report.Describe;
 import net.officefloor.sinewslim.cli.report.JsonReport;
 import net.officefloor.sinewslim.cli.report.MethodReport;
@@ -96,7 +97,7 @@ public enum ReviewWriter {
 			}
 			out.append("  <details").append(open ? " open" : "").append("><summary>proposal</summary>\n\n");
 			out.append("  | Lines | Length | In | Out | Declares | Where | Saves |\n  |---|---:|---|---|---|---|---:|\n");
-			for (Describe.Piece p : Describe.pieces(m.proposal(), pfr)) {
+			for (Pieces.Piece p : Describe.pieces(m.proposal(), pfr)) {
 				String in = Describe.list(p.inputs()) + (p.passed().isEmpty() ? "" : " (passed: " + Describe.list(p.passed()) + ")");
 				out.append(String.format("  | %d-%d | %d | %s | %s | %s | %s | %d |%n", p.lo(), p.hi(), p.lines(), cell(in),
 						cell(Describe.outputs(p.outputs())), cell(Describe.list(p.moved())), cell(p.binding()), p.saves()));

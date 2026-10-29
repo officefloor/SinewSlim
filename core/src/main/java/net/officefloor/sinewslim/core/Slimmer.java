@@ -3,6 +3,7 @@ package net.officefloor.sinewslim.core;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Finds the cheapest set of contiguous statement runs whose extraction brings a method, and every
@@ -25,12 +26,17 @@ public final class Slimmer {
 	}
 
 	public static SlimResult slim(MethodFacts facts, Params p) {
+		return slim(facts, p, Set.of());
+	}
+
+	/** The best segmentation that uses none of the {@code excluded} runs: the pieces the developer skipped. */
+	public static SlimResult slim(MethodFacts facts, Params p, Set<Run> excluded) {
 		MethodIndex m = new MethodIndex(facts, p.freeParams());
 		int total = facts.length() > 0 ? facts.length() : m.code.length;
 		if (total < p.trigger()) {
 			return new SlimResult(false, true, 0, 0, total, List.of(), List.of(), false, p);
 		}
-		Search search = new Search(m, p);
+		Search search = new Search(m, p, excluded);
 		// what the search removes is read against the statements it sees; the lines no statement
 		// covers (the signature, a closing brace) stay whatever is cut
 		int kidsTotal = search.covered(facts.body());

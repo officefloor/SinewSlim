@@ -3,6 +3,7 @@ package net.officefloor.sinewslim.cli.report;
 import java.io.IOException;
 import java.util.List;
 
+import net.officefloor.sinewslim.core.Pieces;
 import net.officefloor.sinewslim.core.Assessment.Status;
 
 /** Markdown for a job summary, a PR comment or a wiki page: GitHub renders the {@code <details>} blocks folded. */
@@ -76,7 +77,7 @@ final class MarkdownReport implements ReportWriter {
 			out.append(String.format("<details><summary><code>%s</code> %s: %s</summary>%n%n", html(m.qualified()),
 					html(m.location()), html(Describe.verdict(m))));
 			out.append("| Lines | Length | In | Out | Declares | Where | Saves |\n|---|---:|---|---|---|---|---:|\n");
-			for (Describe.Piece p : Describe.pieces(m.proposal(), pfr)) {
+			for (Pieces.Piece p : Describe.pieces(m.proposal(), pfr)) {
 				String in = Describe.list(p.inputs()) + (p.passed().isEmpty() ? "" : " (passed: " + Describe.list(p.passed()) + ")");
 				out.append(String.format("| %d-%d | %d | %s | %s | %s | %s | %d |%n", p.lo(), p.hi(), p.lines(), cell(in),
 						cell(Describe.outputs(p.outputs())), cell(Describe.list(p.moved())), cell(p.binding()), p.saves()));

@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The bottom-up dynamic program over the statement tree ({@code split.py}, the search). For each
@@ -45,10 +46,12 @@ final class Search {
 
 	private final MethodIndex m;
 	private final Params p;
+	private final Set<Run> excluded;
 
-	Search(MethodIndex m, Params p) {
+	Search(MethodIndex m, Params p, Set<Run> excluded) {
 		this.m = m;
 		this.p = p;
+		this.excluded = excluded;
 	}
 
 	static List<Seam> concat(List<Seam> a, List<Seam> b) {
@@ -160,7 +163,7 @@ final class Search {
 				// a single statement, as it is or reduced from inside, then extracted whole
 				if (p.ignoreJumps() || Jumps.ok(List.of(kid), p)) {
 					Seam sm = m.seam(kid.start(), kid.end());
-					if (sm.feasible(p)) {
+					if (sm.feasible(p) && !excluded.contains(Run.of(sm))) {
 						int w = sm.width(p), c = sm.cost(p);
 						for (Option o : opts.get(i)) {
 							if (p.minPiece() <= o.rem && o.rem <= p.target() && o.rem - 1 >= p.minSaving()) {
@@ -190,7 +193,7 @@ final class Search {
 					continue;
 				}
 				Seam sm = m.seam(kids.get(j).start(), kid.end());
-				if (!sm.feasible(p)) {
+				if (!sm.feasible(p) || excluded.contains(Run.of(sm))) {
 					continue;
 				}
 				int w = sm.width(p), c = sm.cost(p);

@@ -410,65 +410,73 @@ as ImpactGate's command does.
 
 ### What the developer sees
 
-- **Inspection**: a method at or over the trigger gets a weak warning on its name, with the
-  status in the text: *38 lines; slimmable at cost 2 (2 pieces)*, or *44 lines; cannot be
-  slimmed: every cut carries two results*. The not-slimmable case uses a stronger highlight
-  and its own wording, since it is the redesign notice.
-- **Gutter mark** on long methods; clicking it, or the intention *Slim this method*
-  (Alt+Enter on the name), turns on the **overlay**.
-- **Overlay**: each proposed piece is a coloured band over its lines (range highlighters,
-  colours from the editor scheme so light and dark both work), with a block inlay above it
-  holding the one-line summary and two buttons:
+- **Inspection**: a method at or over the trigger is marked on its name with its verdict:
+  *SinewSlim: 38 lines; slimmable at cost 2 (2 pieces, remainder 21 lines)*. A weak warning
+  when it can be slimmed; a warning when it cannot, or when every piece stays bound to the
+  class, since those are the redesign notices. The quick fix shows the overlay.
+- **Gutter mark** on long methods (a different icon for the redesign cases); clicking it shows
+  or hides the overlay, as does the intention *Slim this method* (Alt+Enter anywhere in it).
+- **Overlay**: each proposed piece is a coloured band over its lines (two alternating colours,
+  light and dark variants), with a block inlay above it holding the one-line summary and two
+  buttons:
 
   ```
-  ┌ piece 1 · 12 lines · in: request, config · out: session · static · saves 11   [Extract…] [Skip]
+  ┃ piece 1 · lines 52-63 · 12 lines · in: config (passed: request) · out: session · static · saves 11   [Extract…] [Skip]
   ```
 
-  The remainder gets a summary at the method's head: *remainder 21 lines · instance: calls
-  validate · 2 of 3 pieces stay in the class*. Esc or the gutter mark turns the overlay off.
-- **Extract…** asks for one thing, the name, in a small popup with a suggestion (camel-cased
-  from the output variable, or empty). Enter performs the extraction; nothing else is asked.
-- **Skip** drops the piece and re-solves the rest without it, since the cheapest segmentation
-  without that run may be different. The overlay redraws.
-- **Records variant**: when the proposal needs a record, the piece's summary says so and its
-  popup asks for two names, the method's and the record's. This is the one case the plugin
-  writes code the IDE's Extract Method does not (below).
-- **Framework reading** classes show the declares/produces form of `SPLIT-TOOL.md` as a
-  diagnostic only, with no Extract button, until a framework-aware refactoring exists.
+  Above the method, a header with the verdict and the remainder, *SinewSlim · 38 lines ·
+  slimmable at cost 2 (2 pieces, remainder 21 lines) · remainder 21 lines (was 38)*, and
+  *Close* (and *Reset* once a piece has been skipped).
+- **Extract…** asks for one thing, the name, with a suggestion (`computeSession` from a single
+  output, or empty). OK performs the extraction; nothing else is asked.
+- **Skip** drops the piece and solves again without it, since the cheapest segmentation
+  without that run may differ. The overlay redraws.
+- Any edit redraws the overlay from the new text, so after an extraction it shows what is left
+  to do, and closes once the method is under the cap.
+- **Records** and the **framework reading** are shown without the Extract button (*needs a
+  record: extract by hand*, *framework reading: extract by hand*) until phase 5.
 
 ### How it works
 
-- **Facts from the editor's own file.** The plugin runs the same `javaparser` module over the
-  document text, not PSI, so the IDE and CI compute the identical proposal for the identical
-  text. Offsets map back to the document by line and column. PSI is used for what JavaParser
-  cannot do: applying the edit. The parse runs in a `ReadAction.nonBlocking` on document
-  change, debounced, per method, and is cancelled on further typing.
-- **Applying a piece**, one at a time, in one command each so each undoes on its own:
-  1. move the piece's literal declarations down into its range (a PSI edit inside the same
-     command), so the IDE does not turn them into parameters;
-  2. select the piece's PSI statements and run IntelliJ's own Extract Method with the method
-     name preset and the dialog suppressed. The platform's entry points are
-     `ExtractMethodProcessor` (`prepare()`, `setMethodName`, `doRefactoring()`) and, in newer
-     platforms, `com.intellij.refactoring.extractMethod.newImpl.MethodExtractor`; both are
-     implementation classes, not stable API, so a first spike pins which one to use for the
-     supported platform range and isolates it behind one small adapter;
-  3. let the IDE decide static or instance, the parameter types, the `throws` clause, and the
-     generics; it is the authority on everything the syntactic facts cannot see;
-  4. re-solve the method and redraw.
+- **Facts from the editor's own text.** The plugin runs the same `javaparser` module and the
+  same configuration over the document text, not PSI, so the IDE and CI compute the identical
+  proposal for the identical text. The analysis is cached per document version (its
+  modification stamp); a file that does not parse mid-edit simply has no marks until it does.
+  PSI is used for what JavaParser cannot do: applying the edit.
+- **Applying a piece**, one command each, so each undoes on its own (`SlimExtractor`, the one
+  class that touches the refactoring):
+  1. find the piece's statements in PSI: the topmost statements wholly on its lines, in one
+     sequence;
+  2. ask the IDE first, before anything changes: `ExtractMethodProcessor.prepare()` on those
+     statements, with its error dialogs off. A refusal leaves the code as it was;
+  3. move the piece's literal declarations down into it (removing them from a multiple
+     declaration when they share one), so the IDE does not turn them into parameters;
+  4. `prepare()`, `testPrepare()`, `setMethodName(name)`, `setStatic(true)` when the piece
+     touches no field and no own method and the IDE agrees it can be static, then
+     `doRefactoring()`. The IDE decides the parameter types, the return, the `throws` clause
+     and the generics; it is the authority on everything the syntactic facts cannot see.
+     Duplicate detection is not run, so no second dialog appears.
+
+  `ExtractMethodProcessor` is an implementation class, not stable API, which is why it is
+  confined to one class; the Plugin Verifier checks it against each newer platform
+  before a publish.
 - **If the IDE refuses** the region (it finds two outputs the facts missed, or a resolution the
-  lexical match got wrong), the plugin shows the IDE's reason on the piece, marks the run
-  excluded, re-solves, and logs the refusal: a refusal is a defect in the facts, and the log is
-  how they get fixed.
-- **Records**: when a piece needs a record, the plugin creates a local record from the output
-  names and types (types from PSI), rewrites the piece's tail to return it and the call site to
-  unpack it, then runs the extraction. This is later work (phase 5); until then the records
-  proposal is shown without the button.
-- **Settings**: read from `.sinew-slim.yml` in the project root and watched for changes; a
-  settings page edits the IDE-only defaults for projects without the file, and shows the
-  effective configuration.
-- **Platform**: IntelliJ Platform Gradle plugin 2.x, `com.intellij.java` bundled plugin, a
-  `sinceBuild` that the extract-method spike settles, Plugin Verifier in CI, signed and
-  published to the JetBrains Marketplace as `~/OfficeFloor-IntelliJ-Plugin` is.
+  lexical match got wrong), the plugin says why, leaves the run out, solves again, and logs the
+  refusal: a refusal is a defect in the facts, and the log is how they get fixed.
+- **Records**: when a piece needs a record, the plugin would create a local record from the
+  output names and types (types from PSI), rewrite the piece's tail to return it and the call
+  site to unpack it, then run the extraction. Phase 5; until then the proposal is shown
+  without the button.
+- **Settings**: read from `.sinew-slim.yml` at the project root, reread when it changes. A file
+  that does not load raises one notification naming the key, and the defaults apply. A settings
+  page for projects without the file is not built.
+- **Not built yet**: the cross-check against IntelliJ's `ControlFlowUtil` (each disagreement
+  logged as a test case for the facts), and Esc to close the overlay.
+- **Platform**: IntelliJ Platform Gradle plugin 2.19, IntelliJ IDEA Community 2024.2.4 as the
+  build target (the last line on JDK 17), `sinceBuild` 242 with no upper bound, the
+  `com.intellij.java` bundled plugin; the Plugin Verifier before every publish; signed and
+  published to the JetBrains Marketplace as `~/OfficeFloor-IntelliJ-Plugin` is. The release
+  attaches the plugin zip to the GitHub Release.
 
 ## What the tool is not
 

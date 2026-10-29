@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.officefloor.sinewslim.core.Pieces;
 import net.officefloor.sinewslim.core.Assessment.Status;
 
 /**
@@ -57,7 +58,7 @@ public final class SarifReport implements ReportWriter {
 			}
 			StringBuilder text = new StringBuilder(lead.apply(m) + m.qualified() + ": " + Describe.verdict(m) + ".");
 			if (m.proposal().feasible()) {
-				for (Describe.Piece p : Describe.pieces(m.proposal(), parameteriseFieldReads)) {
+				for (Pieces.Piece p : Describe.pieces(m.proposal(), parameteriseFieldReads)) {
 					text.append(String.format("%nlines %d-%d (%d lines): in %s, out %s, %s", p.lo(), p.hi(), p.lines(),
 							Describe.list(concat(p.inputs(), p.passed())), Describe.outputs(p.outputs()), p.binding()));
 				}

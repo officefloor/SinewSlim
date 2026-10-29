@@ -1,6 +1,7 @@
 package net.officefloor.sinewslim.core;
 
 import java.util.Locale;
+import java.util.Set;
 
 import net.officefloor.sinewslim.core.Assessment.Obstacle;
 import net.officefloor.sinewslim.core.Assessment.Status;
@@ -21,11 +22,16 @@ public record Assessor(Params params, boolean records, boolean structural, int p
 	public static final Assessor DEFAULTS = new Assessor(Params.DEFAULTS, true, true, 1);
 
 	public Assessment assess(MethodFacts facts) {
-		SlimResult best = Slimmer.slim(facts, params);
+		return assess(facts, Set.of());
+	}
+
+	/** The assessment with the {@code excluded} runs left out of every search: the pieces the developer skipped. */
+	public Assessment assess(MethodFacts facts, Set<Run> excluded) {
+		SlimResult best = Slimmer.slim(facts, params, excluded);
 		if (!best.applicable()) {
 			return new Assessment(Status.UNDER_CAP, null, null, best, best, null);
 		}
-		SlimResult struct = structural && !params.structuralOnly() ? Slimmer.slim(facts, params.structural()) : null;
+		SlimResult struct = structural && !params.structuralOnly() ? Slimmer.slim(facts, params.structural(), excluded) : null;
 		if (best.feasible()) {
 			SlimResult proposal = best;
 			if (struct != null && struct.feasible() && preferStructuralWithin >= 0
@@ -35,9 +41,9 @@ public record Assessor(Params params, boolean records, boolean structural, int p
 			Status status = locked(proposal) ? Status.SLIMMABLE_BUT_LOCKED : Status.SLIMMABLE;
 			return new Assessment(status, null, null, proposal, best, struct);
 		}
-		Obstacle obstacle = obstacle(facts);
+		Obstacle obstacle = obstacle(facts, excluded);
 		if (records && obstacle == Obstacle.OUTPUTS) {
-			SlimResult rec = Slimmer.slim(facts, params.records());
+			SlimResult rec = Slimmer.slim(facts, params.records(), excluded);
 			return new Assessment(Status.SLIMMABLE_WITH_RECORD, obstacle, null, rec, best, struct);
 		}
 		String detail = null;
@@ -56,19 +62,19 @@ public record Assessor(Params params, boolean records, boolean structural, int p
 	}
 
 	/** Which limit, lifted, makes a segmentation feasible. */
-	private Obstacle obstacle(MethodFacts facts) {
+	private Obstacle obstacle(MethodFacts facts, Set<Run> excluded) {
 		boolean outputsLimited = params.maxOutputs() >= 0, inputsLimited = params.maxInputs() >= 0;
-		if (outputsLimited && Slimmer.slim(facts, params.records()).feasible()) {
+		if (outputsLimited && Slimmer.slim(facts, params.records(), excluded).feasible()) {
 			return Obstacle.OUTPUTS;
 		}
-		if (inputsLimited && Slimmer.slim(facts, params.unlimitedInputs()).feasible()) {
+		if (inputsLimited && Slimmer.slim(facts, params.unlimitedInputs(), excluded).feasible()) {
 			return Obstacle.INPUTS;
 		}
 		Params unlimited = params.toBuilder().maxInputs(-1).maxOutputs(-1).build();
-		if (outputsLimited && inputsLimited && Slimmer.slim(facts, unlimited).feasible()) {
+		if (outputsLimited && inputsLimited && Slimmer.slim(facts, unlimited, excluded).feasible()) {
 			return Obstacle.INPUTS_AND_OUTPUTS;
 		}
-		if (Slimmer.slim(facts, unlimited.toBuilder().ignoreJumps(true).build()).feasible()) {
+		if (Slimmer.slim(facts, unlimited.toBuilder().ignoreJumps(true).build(), excluded).feasible()) {
 			return Obstacle.JUMPS;
 		}
 		return Obstacle.LONG_STATEMENT;

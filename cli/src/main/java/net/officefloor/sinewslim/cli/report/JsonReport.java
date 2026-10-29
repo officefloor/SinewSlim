@@ -10,6 +10,7 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
+import net.officefloor.sinewslim.core.Pieces;
 import net.officefloor.sinewslim.config.ConfigLoader;
 import net.officefloor.sinewslim.core.Assessment.Status;
 import net.officefloor.sinewslim.core.SlimResult;
@@ -104,7 +105,7 @@ public final class JsonReport implements ReportWriter {
 			o.put("remainder_locked", p.remainderLocked());
 			o.put("structural", p.params().structuralOnly());
 			List<Object> pieces = new ArrayList<>();
-			for (Describe.Piece d : Describe.pieces(p, parameteriseFieldReads)) {
+			for (Pieces.Piece d : Describe.pieces(p, parameteriseFieldReads)) {
 				Map<String, Object> x = new LinkedHashMap<>();
 				x.put("lines", List.of(d.lo(), d.hi()));
 				x.put("length", d.lines());

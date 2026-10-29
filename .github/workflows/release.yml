@@ -29,10 +29,14 @@ jobs:
           fi
       - name: Build and test
         run: ./gradlew --console=plain build
+      - name: Build the IntelliJ plugin
+        run: ./gradlew --console=plain :intellij:buildPlugin
       - uses: actions/upload-artifact@v4
         with:
           name: jar
-          path: cli/build/libs/sinew-slim.jar
+          path: |
+            cli/build/libs/sinew-slim.jar
+            intellij/build/distributions/sinew-slim-*.zip
 
   github-release:
     needs: build
@@ -51,12 +55,13 @@ jobs:
           set -euo pipefail
           ref="$GITHUB_REF_NAME"            # v0.1.0
           major="${ref%%.*}"                # v0
-          gh release create "$ref" sinew-slim.jar --title "$ref" --generate-notes
+          gh release create "$ref" cli/build/libs/sinew-slim.jar intellij/build/distributions/sinew-slim-*.zip \
+            --title "$ref" --generate-notes
           if ! gh release view "$major" >/dev/null 2>&1; then
             gh release create "$major" --title "$major (the newest ${major}.x)" --latest=false \
               --notes "The newest ${major}.x release, for officefloor/SinewSlim@${major}. See the versioned releases for notes."
           fi
-          gh release upload "$major" sinew-slim.jar --clobber
+          gh release upload "$major" cli/build/libs/sinew-slim.jar --clobber
 
   docker:
     needs: build
