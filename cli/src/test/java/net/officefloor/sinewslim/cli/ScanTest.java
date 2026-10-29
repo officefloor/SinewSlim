@@ -121,6 +121,14 @@ class ScanTest {
 		// several results are declared values under the framework reading, not a record
 		assertEquals("slimmable", m.get("Stats").get("status").asText());
 		assertEquals("method", m.get("Orders").get("reading").asText());
+
+		// the pieces read as functions: what each declares and produces
+		Path text = out.resolve("framework.txt");
+		assertEquals(SinewSlim.OK, SinewSlim.run("scan", "--repo", repo.toString(), "--set", "framework.annotations=Section",
+				"--out", text.toString()));
+		String report = Files.readString(text);
+		assertTrue(report.contains("[framework reading]"), report);
+		assertTrue(report.matches("(?s).*  function \\d+-\\d+  \\d+ lines  declares: .*  produces: .*"), report);
 	}
 
 	@Test

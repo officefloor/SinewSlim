@@ -60,6 +60,7 @@ public final class ConfigLoader {
 		v.put("input_premium", p.inputPremium());
 		v.put("output_weight", p.outputWeight());
 		v.put("multi_output_weight", p.multiOutputWeight());
+		v.put("count_unpacking", p.countUnpacking());
 		v.put("piece_cost", p.pieceCost());
 		v.put("records", true);
 		v.put("structural", true);
@@ -182,6 +183,7 @@ public final class ConfigLoader {
 				.inputPremium(integer(v, "input_premium", 0)) //
 				.outputWeight(integer(v, "output_weight", 0)) //
 				.multiOutputWeight(integer(v, "multi_output_weight", 0)) //
+				.countUnpacking(bool(v, "count_unpacking")) //
 				.pieceCost(integer(v, "piece_cost", 0)) //
 				.lockOnAnyField(bool(v, "lock_on_any_field")) //
 				.build();
@@ -299,6 +301,7 @@ public final class ConfigLoader {
 		v.put("input_premium", p.inputPremium());
 		v.put("output_weight", p.outputWeight());
 		v.put("multi_output_weight", p.multiOutputWeight());
+		v.put("count_unpacking", p.countUnpacking());
 		v.put("piece_cost", p.pieceCost());
 		v.put("records", c.records());
 		v.put("structural", c.structural());

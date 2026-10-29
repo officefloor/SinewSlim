@@ -106,6 +106,15 @@ final class Search {
 		}
 	}
 
+	/**
+	 * The lines an extracted piece leaves behind: its call, and with a record, the unpacking of
+	 * each value when that is counted.
+	 */
+	int left(Seam s) {
+		int k = s.outputs().size();
+		return 1 + (p.countUnpacking() && k > 1 ? k : 0);
+	}
+
 	/** The lines a node's own search accounts for: a sequence's statements, a statement's span. */
 	int covered(Stmt node) {
 		if (node.seq()) {
@@ -168,7 +177,7 @@ final class Search {
 						for (Option o : opts.get(i)) {
 							if (p.minPiece() <= o.rem && o.rem <= p.target() && o.rem - 1 >= p.minSaving()) {
 								for (Option st : List.copyOf(at.get(i).values())) {
-									push(next, new Option(st.rem + 1, Math.max(Math.max(st.width, o.width), w),
+									push(next, new Option(st.rem + left(sm), Math.max(Math.max(st.width, o.width), w),
 											st.cost + o.cost + c, st.pieces + o.pieces + 1,
 											append(concat(st.cuts, o.cuts), sm)));
 								}
@@ -198,7 +207,7 @@ final class Search {
 				}
 				int w = sm.width(p), c = sm.cost(p);
 				for (Option st : at.get(j).values()) {
-					push(next, new Option(st.rem + 1, Math.max(st.width, w), st.cost + c, st.pieces + 1,
+					push(next, new Option(st.rem + left(sm), Math.max(st.width, w), st.cost + c, st.pieces + 1,
 							append(st.cuts, sm)));
 				}
 			}

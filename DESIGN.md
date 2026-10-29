@@ -119,6 +119,7 @@ input_premium: 2         # the extra cost per parameter beyond soft_inputs
 # cost weights
 output_weight: 1         # a single return costs the same as a parameter
 piece_cost: 1            # a name and a call site per piece
+count_unpacking: true    # a piece returning a record leaves its call and one unpacking line per value
 
 # variants, reported beside the default proposal
 records: true            # when nothing is feasible with one return, try records (3 per value)
@@ -152,6 +153,7 @@ ratchet: true            # block only on growth (see Review)
 | min_saving | 2 | 3 | follows from min_piece: a 3-line run replaced by a call saves 2 |
 | max_inputs | 5 | 3 | a hard ceiling only; the soft limit carries the preference instead |
 | max_outputs | 1 | 1 | Java's single return |
+| count_unpacking | true | false (split.py counts the call line alone) | a record piece leaves `int a = totals.a();` per value in the method; counting it keeps the remainder honest |
 
 `sinew-slim config --profile study` prints and applies the study's values, so a run can be set
 beside the paper's numbers.
@@ -433,8 +435,13 @@ as ImpactGate's command does.
   without that run may differ. The overlay redraws.
 - Any edit redraws the overlay from the new text, so after an extraction it shows what is left
   to do, and closes once the method is under the cap.
-- **Records** and the **framework reading** are shown without the Extract button (*needs a
-  record: extract by hand*, *framework reading: extract by hand*) until phase 5.
+- **Records**: a piece with two or more results has *Extract with record…*, which asks for
+  two names, the method's and the record's (suggested as `computeA` and `AAndB`).
+- **Framework reading**: a method marked by `framework.annotations` shows its pieces as
+  functions, *function 1 · lines 48-71 · 24 lines · declares: request, config · produces:
+  session · static*, with *Skip* and no Extract button: the edit is a different refactoring
+  (functions the framework calls, not a method the remainder calls), applied by hand until a
+  framework-aware one exists.
 
 ### How it works
 
@@ -463,10 +470,15 @@ as ImpactGate's command does.
 - **If the IDE refuses** the region (it finds two outputs the facts missed, or a resolution the
   lexical match got wrong), the plugin says why, leaves the run out, solves again, and logs the
   refusal: a refusal is a defect in the facts, and the log is how they get fixed.
-- **Records**: when a piece needs a record, the plugin would create a local record from the
-  output names and types (types from PSI), rewrite the piece's tail to return it and the call
-  site to unpack it, then run the extraction. Phase 5; until then the proposal is shown
-  without the button.
+- **Records** (`RecordExtractor`): the piece is reshaped to have one result, then extracted
+  by the IDE as any piece is. In one command: a result declared inside the piece has its
+  declaration lifted out in front of it, the piece keeping the assignment; the piece ends by
+  packing its results, `Totals totals = new Totals(a, b);`, and each is unpacked after it,
+  `a = totals.a();`, so the record is the piece's one output; `private record Totals(int a,
+  int b) {}` is declared in the class (types read from PSI before anything changes); the IDE
+  extracts; and each lifted declaration is folded into its unpacking, `int a = totals.a();`.
+  A module below Java 16 is refused before anything changes, and a refusal after the reshaping
+  is undone, so either way the code is as it was.
 - **Settings**: read from `.sinew-slim.yml` at the project root, reread when it changes. A file
   that does not load raises one notification naming the key, and the defaults apply. A settings
   page for projects without the file is not built.
@@ -511,7 +523,7 @@ as ImpactGate's command does.
 | 2 | `config` + `cli scan` in every format | a scan of OfficeFloor and of a MLCQ repository in reasonable time; the not-slimmable list read by hand |
 | 3 | `cli review`, hook, Docker, Action, GitLab, Jenkins | a PR in a test repository gets the sticky comment, annotations and the right exit code in each CI |
 | 4 | IntelliJ: inspection, overlay, extract with name only, skip and re-solve | a long method slimmed under the cap in the IDE with only names typed |
-| 5 | records extraction, framework reading, native image | as each is needed |
+| 5 | records extraction, framework reading, native image | records and the framework reading built (the IDE extracts a record piece with no errors left); the native image deferred: a hook run starts in a fifth of a second, and nothing yet needs it |
 
 ## Open questions
 

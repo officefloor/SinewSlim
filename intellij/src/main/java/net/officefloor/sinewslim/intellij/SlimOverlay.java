@@ -187,7 +187,6 @@ public final class SlimOverlay implements Disposable {
 		if (!r.feasible()) {
 			return;
 		}
-		boolean extractable = !ma.framework() && a.status() != Status.SLIMMABLE_WITH_RECORD;
 		List<Pieces.Piece> pieces = Pieces.of(r, pfr);
 		for (int i = 0; i < pieces.size(); i++) {
 			Pieces.Piece p = pieces.get(i);
@@ -197,17 +196,39 @@ public final class SlimOverlay implements Disposable {
 			highlighters.add(editor.getMarkupModel().addRangeHighlighter(start, end, HighlighterLayer.SELECTION - 1, t,
 					HighlighterTargetArea.LINES_IN_RANGE));
 			List<SlimInlayRenderer.Button> buttons = new ArrayList<>();
-			if (extractable) {
-				buttons.add(new SlimInlayRenderer.Button("Extract…", () -> extract(p)));
+			String label;
+			if (ma.framework()) {
+				// a function the framework calls in sequence: what it declares and produces, applied by hand
+				label = "function " + (i + 1) + " · lines " + p.lo() + "-" + p.hi() + " · " + p.frameworkSummary(" · ")
+						+ " · extract by hand as a function";
+			} else {
+				if (p.outputs().size() > 1) {
+					buttons.add(new SlimInlayRenderer.Button("Extract with record…", () -> extractWithRecord(p)));
+				} else {
+					buttons.add(new SlimInlayRenderer.Button("Extract…", () -> extract(p)));
+				}
+				label = "piece " + (i + 1) + " · lines " + p.lo() + "-" + p.hi() + " · " + p.summary(" · ");
 			}
 			buttons.add(new SlimInlayRenderer.Button("Skip", () -> {
 				excluded.add(Run.of(p.seam()));
 				draw();
 			}));
-			String label = "piece " + (i + 1) + " · lines " + p.lo() + "-" + p.hi() + " · " + p.summary(" · ")
-					+ (extractable ? "" : ma.framework() ? " · framework reading: extract by hand" : " · needs a record: extract by hand");
 			addInlay(p.lo(), label, band(i, 160), buttons);
 		}
+	}
+
+	/** Ask for the method's and the record's names, then extract the piece returning the record. */
+	void extractWithRecord(Pieces.Piece piece) {
+		PsiMethod m = method.getElement();
+		if (m == null) {
+			return;
+		}
+		RecordNamesDialog names = new RecordNamesDialog(project, piece.lo(), piece.hi(), String.join(", ", piece.outputs()),
+				"compute" + capitalise(piece.outputs().get(0)), RecordExtractor.suggestName(piece.outputs()));
+		if (!names.showAndGet()) {
+			return;
+		}
+		refused(piece, RecordExtractor.extract(project, editor, m, piece, names.methodName(), names.recordName()));
 	}
 
 	private void addInlay(int line, String text, Color stripe, List<SlimInlayRenderer.Button> buttons) {
@@ -248,15 +269,20 @@ public final class SlimOverlay implements Disposable {
 		if (name == null) {
 			return;
 		}
-		String refused = SlimExtractor.extract(project, editor, m, piece, name);
-		if (refused != null) {
-			// the IDE knows better than the syntactic facts: leave the run out and solve again
-			excluded.add(Run.of(piece.seam()));
-			Messages.showWarningDialog(project, "The IDE would not extract lines " + piece.lo() + "-" + piece.hi() + ": "
-					+ refused + "\nSinewSlim has left that run out and solved again.", "SinewSlim");
-			SlimService.LOG.info("SinewSlim: IDE refused lines " + piece.lo() + "-" + piece.hi() + " of " + file() + ": " + refused);
-			draw();
+		refused(piece, SlimExtractor.extract(project, editor, m, piece, name));
+	}
+
+	/** After an extraction: when it was refused, say why, leave the run out and solve again. */
+	private void refused(Pieces.Piece piece, String refused) {
+		if (refused == null) {
+			return;
 		}
+		// the IDE knows better than the syntactic facts: leave the run out and solve again
+		excluded.add(Run.of(piece.seam()));
+		Messages.showWarningDialog(project, "Lines " + piece.lo() + "-" + piece.hi() + " were not extracted: " + refused
+				+ "\nSinewSlim has left that run out and solved again.", "SinewSlim");
+		SlimService.LOG.info("SinewSlim: lines " + piece.lo() + "-" + piece.hi() + " of " + file() + " not extracted: " + refused);
+		draw();
 	}
 
 	private String file() {

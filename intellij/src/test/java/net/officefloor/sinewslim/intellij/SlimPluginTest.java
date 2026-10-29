@@ -131,6 +131,57 @@ public class SlimPluginTest extends LightJavaCodeInsightFixtureTestCase {
 		assertTrue("finish declares count itself, not as a parameter: " + text, text.contains("finish(StringBuilder out)"));
 	}
 
+	/**
+	 * Two accumulators, updated in turn: every piece that leaves the return behind carries both,
+	 * and the tail with the return needs more parameters than the limit. Only a piece returning a
+	 * record slims it.
+	 */
+	static String accumulators() {
+		StringBuilder b = new StringBuilder("    int sum(int[] x, int p1, int p2, int p3, int p4, int p5) {\n");
+		b.append("        int a = x[0], b = x[1];\n");
+		for (int i = 0; i < 26; i++) {
+			b.append(i % 2 == 0 ? "        a += x[" + i + "];\n" : "        b += x[" + i + "];\n");
+		}
+		return b.append("        return a + b + p1 + p2 + p3 + p4 + p5;\n    }\n").toString();
+	}
+
+	public void testAPieceReturnsARecord() {
+		configure(accumulators());
+		SlimService.MethodAnalysis a = Psi.analysis(method("sum"));
+		assertEquals(Status.SLIMMABLE_WITH_RECORD, a.assessment().status());
+		Pieces.Piece piece = Pieces.of(a.assessment().proposal(), true).stream().filter(p -> p.outputs().size() == 2)
+				.findFirst().orElseThrow();
+		assertNull(RecordExtractor.extract(getProject(), myFixture.getEditor(), method("sum"), piece, "head", "Totals"));
+		String text = myFixture.getEditor().getDocument().getText();
+		assertTrue(text, text.contains("private record Totals(int a, int b)"));
+		assertTrue(text, text.contains("Totals totals = head("));
+		assertTrue(text, text.contains("int a = totals.a();"));
+		assertTrue(text, text.contains("int b = totals.b();"));
+		assertTrue(text, text.contains("return new Totals(a, b);"));
+		List<HighlightInfo> errors = myFixture.doHighlighting(com.intellij.lang.annotation.HighlightSeverity.ERROR);
+		assertEquals(text + errors, 0, errors.size());
+	}
+
+	public void testARecordNeedsJava16() {
+		com.intellij.testFramework.IdeaTestUtil.withLevel(getModule(), com.intellij.pom.java.LanguageLevel.JDK_1_8, () -> {
+			configure(accumulators());
+			SlimService.MethodAnalysis a = Psi.analysis(method("sum"));
+			Pieces.Piece piece = Pieces.of(a.assessment().proposal(), true).stream().filter(p -> p.outputs().size() == 2)
+					.findFirst().orElseThrow();
+			String refused = RecordExtractor.extract(getProject(), myFixture.getEditor(), method("sum"), piece, "head", "Totals");
+			assertNotNull(refused);
+			assertTrue(refused, refused.contains("Java 16"));
+			assertFalse(myFixture.getEditor().getDocument().getText().contains("Totals"));
+		});
+	}
+
+	public void testTheOverlayOffersTheRecord() {
+		configure(accumulators());
+		SlimOverlay o = SlimOverlay.show(getProject(), myFixture.getEditor(), method("sum"));
+		assertTrue(o.inlays().stream().anyMatch(i -> !i.getRenderer().buttons().isEmpty()
+				&& i.getRenderer().buttons().get(0).label().equals("Extract with record…")));
+	}
+
 	public void testTheIdeRefusalIsReported() {
 		configure(steps("longOne", 30));
 		// lines that hold no whole statement: the IDE has nothing to extract

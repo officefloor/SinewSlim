@@ -135,7 +135,9 @@ The plugin marks every method over the cap on its name and in the gutter, with i
 the gutter mark, or Alt+Enter **Slim this method**, and the proposal is drawn over the method:
 each piece highlighted, with what it takes and returns and two buttons. **Extract…** asks for
 one thing, the new method's name, and extracts the piece through the IDE's own Extract Method,
-moving any literal declarations into it first; **Skip** leaves the piece out and solves again.
+moving any literal declarations into it first. A piece with several results has **Extract with
+record…**, which also asks for the record's name and returns the results in it. **Skip** leaves
+the piece out and solves again.
 It reads the project's `.sinew-slim.yml`, so it agrees with the hook and CI about every method.
 
 ```bash

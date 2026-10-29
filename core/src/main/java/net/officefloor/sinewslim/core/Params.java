@@ -25,16 +25,19 @@ package net.officefloor.sinewslim.core;
  *                         the framework injects it (function injection)
  * @param ignoreJumps      a jump leaving a run does not stop it moving: a diagnostic only, to
  *                         tell a method blocked by its jumps from one blocked by a long statement
+ * @param countUnpacking   a piece returning a record leaves one line per value behind as well as
+ *                         its call: {@code int a = totals.a();}. Off in the study (split.py counts
+ *                         the call alone) and under the framework reading (the values are declared)
  */
 public record Params(int trigger, int target, int minPiece, int minSaving, int maxInputs, int maxOutputs, int softInputs,
 		int inputPremium, int outputWeight, int multiOutputWeight, int pieceCost, boolean trailingReturn,
-		boolean structuralOnly, boolean lockOnAnyField, boolean freeParams, boolean ignoreJumps) {
+		boolean structuralOnly, boolean lockOnAnyField, boolean freeParams, boolean ignoreJumps, boolean countUnpacking) {
 
 	/** SinewSlim's defaults: the study's cap, smaller pieces, a hard limit of five parameters. */
-	public static final Params DEFAULTS = new Params(26, 25, 3, 2, 5, 1, -1, 2, 1, 3, 1, true, false, false, false, false);
+	public static final Params DEFAULTS = new Params(26, 25, 3, 2, 5, 1, -1, 2, 1, 3, 1, true, false, false, false, false, true);
 
 	/** The study's defaults ({@code SPLIT.md}, Parameters; {@code split.py}, Params). */
-	public static final Params STUDY = DEFAULTS.toBuilder().minPiece(5).minSaving(3).maxInputs(3).build();
+	public static final Params STUDY = DEFAULTS.toBuilder().minPiece(5).minSaving(3).maxInputs(3).countUnpacking(false).build();
 
 	/** The same search restricted to whole if, loop, try and switch statements. */
 	public Params structural() {
@@ -56,7 +59,7 @@ public record Params(int trigger, int target, int minPiece, int minSaving, int m
 	 * injected for nothing, and each further result is one more declared value, not a record.
 	 */
 	public Params framework() {
-		return toBuilder().freeParams(true).maxOutputs(-1).multiOutputWeight(1).build();
+		return toBuilder().freeParams(true).maxOutputs(-1).multiOutputWeight(1).countUnpacking(false).build();
 	}
 
 	public Builder toBuilder() {
@@ -66,7 +69,7 @@ public record Params(int trigger, int target, int minPiece, int minSaving, int m
 	public static final class Builder {
 		private int trigger, target, minPiece, minSaving, maxInputs, maxOutputs, softInputs, inputPremium, outputWeight,
 				multiOutputWeight, pieceCost;
-		private boolean trailingReturn, structuralOnly, lockOnAnyField, freeParams, ignoreJumps;
+		private boolean trailingReturn, structuralOnly, lockOnAnyField, freeParams, ignoreJumps, countUnpacking;
 
 		private Builder(Params p) {
 			trigger = p.trigger;
@@ -85,6 +88,7 @@ public record Params(int trigger, int target, int minPiece, int minSaving, int m
 			lockOnAnyField = p.lockOnAnyField;
 			freeParams = p.freeParams;
 			ignoreJumps = p.ignoreJumps;
+			countUnpacking = p.countUnpacking;
 		}
 
 		public Builder trigger(int v) {
@@ -167,10 +171,15 @@ public record Params(int trigger, int target, int minPiece, int minSaving, int m
 			return this;
 		}
 
+		public Builder countUnpacking(boolean v) {
+			countUnpacking = v;
+			return this;
+		}
+
 		public Params build() {
 			return new Params(trigger, target, minPiece, minSaving, maxInputs, maxOutputs, softInputs, inputPremium,
 					outputWeight, multiOutputWeight, pieceCost, trailingReturn, structuralOnly, lockOnAnyField,
-					freeParams, ignoreJumps);
+					freeParams, ignoreJumps, countUnpacking);
 		}
 	}
 }
