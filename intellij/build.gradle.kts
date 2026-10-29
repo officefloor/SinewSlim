@@ -52,9 +52,18 @@ intellijPlatform {
     publishing {
         token = providers.environmentVariable("PUBLISH_TOKEN")
     }
+    // -PverifyIde=IC:2024.2.6 or IntellijIdea:2026.2.3 verifies against that one IDE (CI runs one per job: the IDEs do not
+    // fit on one runner's disk); without it, every IDE the platform recommends for the range
     pluginVerification {
         ides {
-            recommended()
+            val one = providers.gradleProperty("verifyIde").orNull
+            if (one != null) {
+                val (type, version) = one.split(":", limit = 2)
+                // a type by its name (IntellijIdea, the unified IDE from 2025.3) or its code (IC)
+                create(IntelliJPlatformType.values().firstOrNull { it.name == type } ?: IntelliJPlatformType.fromCode(type), version)
+            } else {
+                recommended()
+            }
         }
     }
 }

@@ -1,10 +1,10 @@
 name: Verify plugin
 
-# The JetBrains Plugin Verifier: the IntelliJ plugin against every IDE the platform recommends
-# for its build range (2024.2 to the newest). It matters because the extraction goes through
-# ExtractMethodProcessor, an implementation class that a newer platform may change. It needs
-# several IDEs (gigabytes), so it runs when the plugin or what it bundles changes on main, and
-# on demand, not on every pull request.
+# The JetBrains Plugin Verifier: the IntelliJ plugin against each IDE of its build range (2024.2
+# to the newest). It matters because the extraction goes through ExtractMethodProcessor, an
+# implementation class that a newer platform may change. The IDEs together do not fit on one
+# runner's disk, so each is verified in its own job. It runs when the plugin or what it bundles
+# changes on main, and on demand, not on every pull request.
 on:
   push:
     branches: [main]
@@ -23,12 +23,25 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # the IDEs the platform recommends for sinceBuild 242 (IntellijIdea: the unified IDE from 2025.3)
+        ide:
+          - IC:2024.2.6
+          - IC:2024.3.7.1
+          - IC:2025.1.7.2
+          - IC:2025.2.6.3
+          - IntellijIdea:2025.3.6.1
+          - IntellijIdea:2026.1.5
+          - IntellijIdea:2026.2.3
+          - IntellijIdea:263.7307.44
+    name: verify ${{ matrix.ide }}
     steps:
-      - name: Free disk space for the IDEs
+      - name: Free disk space for the IDE
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force > /dev/null
           df -h /
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -36,12 +49,14 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true    # the IDE is too big to be worth caching per version
       - name: Verify the plugin
-        run: ./gradlew --console=plain :intellij:verifyPlugin
-      - name: Keep the verifier's reports
+        run: ./gradlew --console=plain :intellij:verifyPlugin -PverifyIde=${{ matrix.ide }}
+      - name: Keep the verifier's report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: plugin-verifier-reports
+          name: plugin-verifier-${{ strategy.job-index }}
           path: intellij/build/reports/pluginVerifier
           if-no-files-found: ignore
