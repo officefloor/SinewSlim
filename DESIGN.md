@@ -44,15 +44,43 @@ Java throughout, no Python. The study's `split.py` is ported, not wrapped.
 - **Gradle** (Kotlin DSL) for every module, since the IntelliJ plugin needs the IntelliJ
   Platform Gradle plugin (2.x, as in `~/OfficeFloor-IntelliJ-Plugin`) and one build tool is
   better than two.
-- **JavaParser** (pinned, 3.28.x as the measurer) for the facts outside the IDE. No symbol
+- **JavaParser** (pinned, 3.28.x as the measurer) parses the Java outside the IDE. No symbol
   solver: the pass reads syntax and lexical scope only, which is what makes it fast enough for
   a hook.
+
+### What is a library, and what is ours
+
+SinewSlim parses nothing itself. The parsing, the grammar across Java versions, and the syntax
+tree are JavaParser's outside the IDE and IntelliJ's PSI inside it, and both are maintained
+upstream.
+
+What is ours is the layer between the tree and the search: walking the tree to record each
+variable's reference, definition and mutation lines, the loop extents and the jumps. No
+library offers this from source. The candidates were checked:
+
+| Library | Why not |
+|---|---|
+| JavaParser symbol solver | resolves names and types; no def-use or data flow |
+| Spoon | a richer tree, but its data-flow module is experimental and unmaintained |
+| PMD 7 | dropped its data-flow analysis in version 7 |
+| Soot / SootUp, WALA, Checker Framework dataflow | work on bytecode or need `javac` to compile the code first: unusable on a staged hook, on unsaved editor text, or on a repository that does not build |
+| IntelliJ `ControlFlowUtil` (`getInputVariables`, `getOutputVariables`) | gives exactly a range's inputs and outputs, but only inside the IDE |
+
+So the facts layer stays, but it is not new code. It is the study's `LiveWidth.java`, already
+Java and already run over the study's corpora, taken over with the study-only output removed
+(about 800 lines today, less once trimmed). What is ported from Python is only the search,
+`split.py`.
+
+Inside the IDE, the plugin cross-checks: for each proposed piece it asks IntelliJ's
+`ControlFlowUtil` for the range's inputs and outputs and logs any disagreement with the facts
+layer. Each disagreement is a test case for the facts layer, so the IDE keeps it honest
+without SinewSlim depending on the IDE everywhere else.
 
 ```
 SinewSlim/
   settings.gradle.kts
   core/        pure: the facts model, the seam, the search, the cost, the result. No I/O, no parser.
-  javaparser/  facts from source with JavaParser (the LiveWidth pass, ported and trimmed)
+  javaparser/  facts from JavaParser's syntax tree (the study's LiveWidth.java, taken over)
   config/      .sinew-slim.yml: load, defaults, validation, the effective-config dump
   cli/         scan, review, hook, comment; git; report formats; providers (GitHub, GitLab)
   intellij/    the plugin: inspection, overlays, extraction through the IDE
