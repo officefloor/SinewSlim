@@ -1,0 +1,47 @@
+name: Verify plugin
+
+# The JetBrains Plugin Verifier: the IntelliJ plugin against every IDE the platform recommends
+# for its build range (2024.2 to the newest). It matters because the extraction goes through
+# ExtractMethodProcessor, an implementation class that a newer platform may change. It needs
+# several IDEs (gigabytes), so it runs when the plugin or what it bundles changes on main, and
+# on demand, not on every pull request.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "intellij/**"
+      - "core/**"
+      - "javaparser/**"
+      - "config/**"
+      - "gradle.properties"
+      - ".github/workflows/verify-plugin.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Free disk space for the IDEs
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Verify the plugin
+        run: ./gradlew --console=plain :intellij:verifyPlugin
+      - name: Keep the verifier's reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-verifier-reports
+          path: intellij/build/reports/pluginVerifier
+          if-no-files-found: ignore
