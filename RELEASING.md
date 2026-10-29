@@ -38,21 +38,27 @@ That one push:
 
 ### GHCR (the Docker image)
 
-No secret: the `docker` job pushes with the built-in `GITHUB_TOKEN`. **The package must be
+No secret: the `docker` job pushes with the built-in `GITHUB_TOKEN`. **The package must stay
 public**: the GitLab and Jenkins templates and the pre-commit hook pull
-`ghcr.io/officefloor/sinew-slim:0` anonymously. After the first release, make it public at
-https://github.com/orgs/officefloor/packages/container/sinew-slim/settings (Danger Zone >
-Change visibility; public packages must be allowed at the organisation level first). Check with
-an anonymous pull:
+`ghcr.io/officefloor/sinew-slim:0` anonymously.
+
+Nothing needs doing for that: the package is created by this public repository's workflow, so
+it took the repository's public visibility on the first release (v0.1.0). Check it after a
+release, or after any change to the organisation's package policy, with an anonymous pull:
 
 ```bash
 docker logout ghcr.io
 docker pull ghcr.io/officefloor/sinew-slim:0
 ```
 
+If that fails with `unauthorized`, the package has become private: make it public at
+https://github.com/orgs/officefloor/packages/container/sinew-slim/settings (Danger Zone >
+Change visibility; public packages must be allowed at the organisation level first).
+
 ### The repository
 
-The Action and the release assets are only reachable by others once the repository is public.
+The repository is public, which the Action and the release assets need to be reachable by
+others; keep it so.
 
 ### GitHub Marketplace (optional)
 
