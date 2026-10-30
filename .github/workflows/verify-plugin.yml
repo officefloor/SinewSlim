@@ -50,14 +50,14 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: true    # the IDE is too big to be worth caching per version
       - name: Verify the plugin
         run: ./gradlew --console=plain :intellij:verifyPlugin -PverifyIde=${{ matrix.ide }}
       - name: Keep the verifier's report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: plugin-verifier-${{ strategy.job-index }}
           path: intellij/build/reports/pluginVerifier
