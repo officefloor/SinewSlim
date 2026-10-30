@@ -63,7 +63,7 @@ then **Settings → Plugins → ⚙ → Install Plugin from Disk…**.
 
 ## In your pull requests
 
-Add the GitHub Action and every pull request gets reviewed for long methods:
+Add the [GitHub Action](https://github.com/marketplace/actions/sinew-slim) and every pull request gets reviewed for long methods:
 
 ```yaml
 name: sinew-slim
