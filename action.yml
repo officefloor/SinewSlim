@@ -1,5 +1,5 @@
 name: "sinew-slim"
-description: "Review the methods a pull request touches: slim each one over the length cap at its cheapest seams, and flag the ones to redesign."
+description: "Review the methods a pull request touches: slim each one over the length cap at its cheapest seams, flag ones to redesign."
 branding:
   icon: "minimize-2"
   color: "green"

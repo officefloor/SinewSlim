@@ -103,8 +103,23 @@ Change visibility; public packages must be allowed at the organisation level fir
 The repository is public, which the Action and the release assets need to be reachable by
 others; keep it so.
 
-### GitHub Marketplace (optional)
+### GitHub Marketplace (the Action)
 
-Each release creates a GitHub Release, which is where a Marketplace listing lives. The first
-listing is manual: edit the Release, tick "Publish this Action to the GitHub Marketplace", and
-accept the agreement. Later releases can be published from the same screen.
+The Action is listed as [sinew-slim](https://github.com/marketplace/actions/sinew-slim). A
+listing is a flag on a GitHub Release, and only the web UI can set it: the `gh release create`
+in `release.yml` makes the Release but never lists it. So each release is one click more:
+
+1. **Once, for the organisation:** an owner of `officefloor` accepts the GitHub Marketplace
+   Developer Agreement (the Publish checkbox below stays disabled until then). Publishing needs
+   two-factor authentication on the account doing it.
+2. **Per release**, after the workflow has finished: open the versioned Release (`v0.2.0`, not
+   the rolling `v0`), **Edit**, tick **Publish this Action to the GitHub Marketplace**, check it
+   reports "Everything looks good!", and **Update release**. The first time, also pick the
+   categories: *Code quality* primary, *Code review* secondary.
+
+GitHub checks the `action.yml` at the Release's tag: one `action.yml` at the root, a `name`
+no other Marketplace action, user, organisation or category has, `branding`, and a
+`description` under 125 characters. Keep those so when editing it.
+
+Skipping step 2 for a release breaks nothing: `@v0` and `@vX.Y.Z` work whether or not the
+listing shows the newest version; the listing just stays on the last one ticked.

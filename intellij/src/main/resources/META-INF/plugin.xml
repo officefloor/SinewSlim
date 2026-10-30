@@ -21,7 +21,9 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <ul><li><b>0.1.0</b>: the inspection, the gutter mark, the proposal overlay, and extraction
+        <ul><li><b>0.1.1</b>: no change to the plugin; the release lists the GitHub Action on the
+        GitHub Marketplace.</li>
+        <li><b>0.1.0</b>: the inspection, the gutter mark, the proposal overlay, and extraction
         with only the name asked for.</li></ul>
     ]]></change-notes>
 
