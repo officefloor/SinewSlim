@@ -60,7 +60,7 @@ signing secrets it publishes unsigned, with a warning.
    for the value).
 3. **Signing** uses the OfficeFloor identity shared by all OfficeFloor plugins: the
    organisation secrets `CERTIFICATE_CHAIN`, `PRIVATE_KEY` and `PRIVATE_KEY_PASSWORD`, made,
-   renewed and given to repositories by the scripts in
+   replaced and given to repositories by the scripts in
    [OfficeFloorMaintenance](https://github.com/officefloor/OfficeFloorMaintenance#jetbrains-plugin-signing),
    whose list includes this repository. Don't set them here as repository secrets: those
    would override the organisation's.
