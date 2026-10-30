@@ -1,0 +1,39 @@
+# The GitLab project's pipeline, for the CI/CD Catalog (RELEASING.md). GitHub ignores this file.
+#
+# Including the component at this commit checks its spec and job on every pipeline, so a broken
+# component fails before a release; on merge requests it also reviews SinewSlim itself. On a
+# vMAJOR.MINOR.PATCH tag (the GitHub release's), it publishes the component to the catalog as
+# MAJOR.MINOR.PATCH: the catalog takes semantic versions, so users include it as @0.1.1, @0 or
+# @~latest.
+
+stages: [test, release]
+
+include:
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/sinew-slim@$CI_COMMIT_SHA
+
+component-version:
+  stage: release
+  image: alpine:3.20
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  script:
+    - echo "VERSION=${CI_COMMIT_TAG#v}" > version.env
+  artifacts:
+    reports:
+      dotenv: version.env
+
+# The catalog only lists a release made by the release keyword, not by the Releases API. It
+# creates the bare VERSION tag at this commit; that tag's own pipeline has no jobs to run.
+release-component:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  needs: [component-version]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  script:
+    - echo "Releasing the CI/CD component $VERSION"
+  release:
+    tag_name: $VERSION
+    ref: $CI_COMMIT_SHA
+    name: $VERSION
+    description: "SinewSlim $VERSION. Notes: https://github.com/officefloor/SinewSlim/releases/tag/$CI_COMMIT_TAG"

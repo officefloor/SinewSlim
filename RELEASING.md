@@ -98,6 +98,38 @@ If that fails with `unauthorized`, the package has become private: make it publi
 https://github.com/orgs/officefloor/packages/container/sinew-slim/settings (Danger Zone >
 Change visibility; public packages must be allowed at the organisation level first).
 
+### GitLab CI/CD Catalog (the component)
+
+`templates/sinew-slim.yml` is a GitLab CI/CD component, the same job as `ci/gitlab-ci.yml`
+with its settings as inputs. Users include it as:
+
+```yaml
+include:
+  - component: gitlab.com/officefloor-net/sinew-slim/sinew-slim@0
+    inputs:
+      enforcement: block
+```
+
+The catalog lists it from a GitLab project, `gitlab.com/officefloor-net/sinew-slim`, whose
+pipeline is the root `.gitlab-ci.yml` (GitHub ignores it). On a `vMAJOR.MINOR.PATCH` tag that
+pipeline publishes the component as `MAJOR.MINOR.PATCH` with the `release` keyword: the catalog
+only takes semantic versions, and only lists releases made by that keyword, not by the API. The
+release creates the bare tag (`0.1.2`) on GitLab only; whatever copies this repository there
+must push branches and tags by name, never `--mirror`, or it deletes those tags.
+
+The GitLab project, once (in the `officefloor-net` group: the `officefloor` name on GitLab is
+taken):
+
+- Public; description `Review the methods a merge request touches: slim each one over the
+  length cap at its cheapest seams, flag ones to redesign.` (the catalog shows it, and a mirror
+  does not copy it); topics `java`, `code-review`, `code-quality`, `refactoring`,
+  `long-method`, `ci-catalog`; the plugin icon as a PNG avatar.
+- **Settings > General > Visibility, project features, permissions > CI/CD Catalog project**
+  on (Owner role).
+- Categories: Code Quality primary, Code Review secondary.
+
+The catalog shows the project only after its first release.
+
 ### The repository
 
 The repository is public, which the Action and the release assets need to be reachable by

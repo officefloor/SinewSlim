@@ -1,0 +1,71 @@
+spec:
+  inputs:
+    job-name:
+      description: "The job's name."
+      default: "sinew-slim"
+    stage:
+      description: "The stage the job runs in."
+      default: "test"
+    image:
+      description: "The sinew-slim image: :0 is the newest 0.x, :0.1.1 pins exactly."
+      default: "ghcr.io/officefloor/sinew-slim:0"
+    enforcement:
+      description: "warn (report only), block (fail the job when a touched method crosses the cap or grows over it) or off. Empty keeps .sinew-slim.yml's (warn by default)."
+      default: ""
+    ratchet:
+      description: "true: gate only on growth. false: gate on every touched method over the cap."
+      type: boolean
+      default: true
+    config:
+      description: "Path to a .sinew-slim.yml (default: the repository root's, if there)."
+      default: ""
+    comment:
+      description: "Post the review as a sticky MR note (needs a GITLAB_TOKEN CI/CD variable with the api scope)."
+      type: boolean
+      default: true
+---
+# sinew-slim: GitLab CI/CD component.
+#
+# Reviews each merge request against its base: a proposal for every touched method over the
+# length cap, a redesign notice for each one that cannot be slimmed. The findings show in the
+# merge request's code quality widget, and as a sticky MR note when GITLAB_TOKEN is set. With
+# enforcement: block the job fails when a touched method crosses the cap or grows over it: mark
+# it required to gate merges.
+
+"$[[ inputs.job-name ]]":
+  stage: $[[ inputs.stage ]]
+  image:
+    name: $[[ inputs.image ]]
+    entrypoint: [""]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: "0"                              # the full history, so the merge base is there
+    SINEW_SLIM_ENFORCEMENT: "$[[ inputs.enforcement ]]"
+    SINEW_SLIM_RATCHET: "$[[ inputs.ratchet ]]"
+    SINEW_SLIM_CONFIG: "$[[ inputs.config ]]"
+    SINEW_SLIM_COMMENT: "$[[ inputs.comment ]]"
+  script:
+    - |
+      set +e   # do not stop on a blocking verdict: report it, then gate at the end
+      args="review --mode range --base $CI_MERGE_REQUEST_DIFF_BASE_SHA"
+      if [ -n "$SINEW_SLIM_ENFORCEMENT" ]; then args="$args --enforcement $SINEW_SLIM_ENFORCEMENT"; fi
+      if [ "$SINEW_SLIM_RATCHET" = "false" ]; then args="$args --no-ratchet"; fi
+      if [ -n "$SINEW_SLIM_CONFIG" ]; then args="$args --config $SINEW_SLIM_CONFIG"; fi
+      sinew-slim $args --format markdown --out sinew-slim.md
+      code=$?
+      if [ "$code" = 1 ]; then exit 1; fi
+      cat sinew-slim.md
+      sinew-slim $args --format codequality --out gl-code-quality-report.json
+      if [ "$SINEW_SLIM_COMMENT" = "true" ] && [ -n "$GITLAB_TOKEN" ] && [ -s sinew-slim.md ]; then
+        sinew-slim comment --provider gitlab --body-file sinew-slim.md \
+          || echo "sinew-slim: could not post the MR note (GITLAB_TOKEN needs the api scope)"
+      fi
+      exit $code
+  artifacts:
+    when: always
+    paths:
+      - sinew-slim.md
+    reports:
+      codequality: gl-code-quality-report.json
+    expire_in: 1 week

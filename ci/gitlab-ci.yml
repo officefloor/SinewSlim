@@ -4,8 +4,10 @@
 # length cap, a redesign notice for each one that cannot be slimmed. Runs the published image,
 # so there is nothing to install. Use it one of two ways:
 #
-#   1. copy the job below into your .gitlab-ci.yml, or
-#   2. include it:
+#   1. copy the job below into your .gitlab-ci.yml,
+#   2. include the CI/CD component templates/sinew-slim.yml from the catalog (RELEASING.md),
+#      which takes these settings as inputs, or
+#   3. include it:
 #        include:
 #          - remote: 'https://raw.githubusercontent.com/officefloor/SinewSlim/v0/ci/gitlab-ci.yml'
 #
