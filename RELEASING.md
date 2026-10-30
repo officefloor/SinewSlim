@@ -52,8 +52,8 @@ and when all three succeed, moves the `v0` tag to this commit. A failure in one 
 
 ### JetBrains Marketplace (the IntelliJ plugin)
 
-A release needs four secrets: `PUBLISH_TOKEN` from the repository, and the signing trio from
-the OfficeFloor organisation. If any is missing, the release fails at its first step, before
+A release needs four secrets, all from the OfficeFloor organisation: `PUBLISH_TOKEN` and the
+signing trio. If any is missing, the release fails at its first step, before
 anything is published; `publishPlugin` also refuses to run without them, so the plugin is never
 published unsigned.
 
@@ -64,17 +64,14 @@ published unsigned.
    category *Code tools*, and link the repository. Then, on the plugin's page, **Edit > Vendor**
    moves it to an *OfficeFloor* organisation (create one under your profile's
    Organizations), so others can be given access.
-2. **`PUBLISH_TOKEN`:** a permanent token from https://plugins.jetbrains.com/author/me/tokens,
-   set as a repository secret: `gh secret set PUBLISH_TOKEN -R officefloor/SinewSlim` (it asks
-   for the value).
-3. **Signing** uses the OfficeFloor identity shared by all OfficeFloor plugins: the
-   organisation secrets `CERTIFICATE_CHAIN`, `PRIVATE_KEY` and `PRIVATE_KEY_PASSWORD`, made,
-   replaced and given to repositories by the scripts in
-   [OfficeFloorMaintenance](https://github.com/officefloor/OfficeFloorMaintenance#jetbrains-plugin-signing),
-   whose list includes this repository. Don't set them here as repository secrets: those
-   would override the organisation's.
+2. **The secrets** are shared by all OfficeFloor plugins: the organisation secrets
+   `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, `PRIVATE_KEY` and `PRIVATE_KEY_PASSWORD`, set by
+   `setup-jetbrains-publishing.sh` in
+   [OfficeFloorMaintenance](https://github.com/officefloor/OfficeFloorMaintenance#publishing-intellij-plugins-to-the-jetbrains-marketplace),
+   whose `jetbrains-plugin-repositories.txt` lists this repository. Don't set them here as
+   repository secrets: those would override the organisation's.
 
-   To check signing locally with the identity's files: `CERTIFICATE_CHAIN="$(cat chain.crt)"
+   To check signing locally with the identity's files (if a copy was kept): `CERTIFICATE_CHAIN="$(cat chain.crt)"
    PRIVATE_KEY="$(cat private_encrypted.pem)" PRIVATE_KEY_PASSWORD=… ./gradlew
    :intellij:signPlugin`, then `CERTIFICATE_CHAIN="$(cat chain.crt)" ./gradlew
    :intellij:verifyPluginSignature`.

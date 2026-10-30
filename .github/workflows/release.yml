@@ -21,8 +21,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      # the Marketplace token from this repository, the signing identity from the OfficeFloor
-      # organisation (officefloor/OfficeFloorMaintenance)
+      # all four from the OfficeFloor organisation (setup-jetbrains-publishing.sh in
+      # officefloor/OfficeFloorMaintenance)
       - name: Check the publishing secrets
         env:
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
