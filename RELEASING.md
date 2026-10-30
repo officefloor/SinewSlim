@@ -5,10 +5,12 @@ tests and publishes everything; this note covers the tag scheme and the one-time
 
 ## Version scheme
 
-- The version lives in `gradle.properties` (`version=0.1.0`). The jar's
-  `Implementation-Version`, and so `sinew-slim --version`, come from it.
-- Full version tags are `vMAJOR.MINOR.PATCH` (`v0.1.0`). These are the tags you push; the
-  release workflow fails fast if the tag is not `v` + the version in `gradle.properties`.
+- **The tag is the version.** Release tags are `vMAJOR.MINOR.PATCH` (`v0.2.0`); the release
+  builds everything with `-Pversion=0.2.0`, so the jar's `Implementation-Version` (and
+  `sinew-slim --version`), the plugin's version on the Marketplace, the plugin zip's name and
+  the Docker image all carry it. Any other tag form fails the release before anything happens.
+- `gradle.properties` holds only the development version (`0.0.0-SNAPSHOT`) for local builds;
+  it is never edited for a release.
 - The workflow moves a floating major tag (`v0`) to the newest release on that major, so the
   Action can be pinned as `officefloor/SinewSlim@v0`.
 - It also keeps a rolling GitHub Release named after the major tag (`v0`) holding the newest
@@ -19,18 +21,18 @@ tests and publishes everything; this note covers the tag scheme and the one-time
 ## Cutting a release
 
 ```bash
-# 1. Set version= in gradle.properties, and add a <li><b>0.1.0</b>: …</li> entry to the
-#    change-notes in intellij/src/main/resources/META-INF/plugin.xml (the Marketplace shows it;
-#    the release fails fast without it). Commit both.
-# 2. Tag and push.
-git tag v0.1.0
-git push origin v0.1.0
+# 1. Add a <li><b>0.2.0</b>: …</li> entry to the change-notes in
+#    intellij/src/main/resources/META-INF/plugin.xml (the Marketplace shows it; the release
+#    fails fast without it), and commit it.
+# 2. Tag that commit and push the tag.
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 That one push first checks, publishing nothing until all pass:
 
 - the four publishing secrets are set (below), before anything else;
-- the tag matches `gradle.properties`, and `plugin.xml` has change notes for the version;
+- the tag is `vMAJOR.MINOR.PATCH`, and `plugin.xml` has change notes for that version;
 - the build and tests pass;
 - the Plugin Verifier passes against every IDE of the plugin's range.
 

@@ -7,9 +7,11 @@
 # Scan:    docker run --rm -v "$PWD:/repo" sinew-slim scan --format html --out scan.html
 
 FROM eclipse-temurin:17-jdk AS build
+# the release passes the tag's version; without it, gradle.properties' development version
+ARG VERSION
 WORKDIR /src
 COPY . /src
-RUN ./gradlew --no-daemon --console=plain -q :cli:fatJar
+RUN ./gradlew --no-daemon --console=plain -q ${VERSION:+-Pversion=$VERSION} :cli:fatJar
 
 FROM eclipse-temurin:17-jre
 RUN apt-get update \
