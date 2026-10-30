@@ -27,26 +27,33 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-That one push:
+That one push first checks, publishing nothing until all pass:
 
-- builds and tests, and attaches `sinew-slim.jar` to a GitHub Release `v0.1.0` with generated
-  notes;
-- creates the rolling `v0` release if it is not there, and replaces its jar;
+- the four publishing secrets are set (below), before anything else;
+- the tag matches `gradle.properties`, and `plugin.xml` has change notes for the version;
+- the build and tests pass;
+- the Plugin Verifier passes against every IDE of the plugin's range.
+
+Then, in parallel, it:
+
+- attaches `sinew-slim.jar` and the plugin zip to a GitHub Release `v0.1.0` with generated
+  notes, creates the rolling `v0` release if it is not there, and replaces its jar;
 - builds and pushes the image `ghcr.io/officefloor/sinew-slim` tagged `0.1.0`, `0.1`, `0` and
   `latest`;
-- moves the `v0` tag to this commit;
-- runs the Plugin Verifier against every IDE of the plugin's range, and when all pass, signs
-  the plugin and uploads it to the JetBrains Marketplace. JetBrains then reviews it, so the
-  version appears there a day or two later. A verifier or Marketplace failure does not undo
-  the GitHub release; fix it and re-run the failed jobs.
+- signs the plugin and uploads it to the JetBrains Marketplace (JetBrains then reviews it, so
+  the version appears there a day or two later);
+
+and when all three succeed, moves the `v0` tag to this commit. A failure in one of those three
+(an outage, say) does not undo the others: fix it and re-run the failed jobs.
 
 ## One-time setup
 
 ### JetBrains Marketplace (the IntelliJ plugin)
 
-The `marketplace` job reads four secrets: `PUBLISH_TOKEN` from the repository, and the signing
-trio from the OfficeFloor organisation. Without `PUBLISH_TOKEN` it warns and skips; without the
-signing secrets it publishes unsigned, with a warning.
+A release needs four secrets: `PUBLISH_TOKEN` from the repository, and the signing trio from
+the OfficeFloor organisation. If any is missing, the release fails at its first step, before
+anything is published; `publishPlugin` also refuses to run without them, so the plugin is never
+published unsigned.
 
 1. **The first upload is by hand.** The Marketplace only accepts uploads from Gradle for a
    plugin that already exists there. Sign in at https://plugins.jetbrains.com with the
@@ -70,8 +77,6 @@ signing secrets it publishes unsigned, with a warning.
    :intellij:signPlugin`, then `CERTIFICATE_CHAIN="$(cat chain.crt)" ./gradlew
    :intellij:verifyPluginSignature`.
 
-To publish a version that was released before the secrets existed (v0.1.0 is uploaded by hand
-in step 1, so this is only for a later one), re-run the release workflow's `marketplace` job.
 Once the listing is live, add its link and the IDE's **Settings > Plugins > Marketplace**
 install route to the README.
 
