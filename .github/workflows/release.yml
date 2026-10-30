@@ -3,8 +3,9 @@ name: Release
 # Cut a release by pushing a version tag that matches gradle.properties, e.g.
 #   git tag v0.1.0 && git push origin v0.1.0
 # That attaches the jar to a GitHub Release, refreshes the rolling major release (v0) the
-# Action downloads from, pushes the Docker image to GHCR, and moves the major tag so the
-# Action can be pinned as officefloor/SinewSlim@v0.
+# Action downloads from, pushes the Docker image to GHCR, moves the major tag so the Action can
+# be pinned as officefloor/SinewSlim@v0, and, once the Plugin Verifier passes on every IDE,
+# publishes the IntelliJ plugin to the JetBrains Marketplace.
 on:
   push:
     tags: ["v*.*.*"]
@@ -25,6 +26,10 @@ jobs:
           version="$(sed -n 's/^version=//p' gradle.properties)"
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then
             echo "::error::tag $GITHUB_REF_NAME does not match version=$version in gradle.properties"
+            exit 1
+          fi
+          if ! grep -q "<b>$version</b>" intellij/src/main/resources/META-INF/plugin.xml; then
+            echo "::error::plugin.xml has no change-notes entry <b>$version</b> for the Marketplace"
             exit 1
           fi
       - name: Build and test
@@ -91,6 +96,42 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  verify-plugin:
+    needs: build
+    uses: ./.github/workflows/verify-plugin.yml
+
+  # Sign and upload the plugin to the JetBrains Marketplace. Without the PUBLISH_TOKEN secret it
+  # warns and skips, so the rest of the release does not depend on it (RELEASING.md).
+  marketplace:
+    needs: verify-plugin
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+      CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+    steps:
+      - name: Skip without a Marketplace token
+        if: env.PUBLISH_TOKEN == ''
+        run: echo "::warning::PUBLISH_TOKEN is not set; the plugin was not published to the JetBrains Marketplace"
+      - name: Warn when unsigned
+        if: env.PUBLISH_TOKEN != '' && (env.CERTIFICATE_CHAIN == '' || env.PRIVATE_KEY == '')
+        run: echo "::warning::CERTIFICATE_CHAIN or PRIVATE_KEY is not set; the plugin is published unsigned"
+      - uses: actions/checkout@v5
+        if: env.PUBLISH_TOKEN != ''
+      - uses: actions/setup-java@v5
+        if: env.PUBLISH_TOKEN != ''
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        if: env.PUBLISH_TOKEN != ''
+      - name: Publish the plugin
+        if: env.PUBLISH_TOKEN != ''
+        run: ./gradlew --console=plain :intellij:publishPlugin
 
   # Move the major tag so @v0 runs the newest v0.x action.yml, which downloads the v0 jar.
   major-tag:

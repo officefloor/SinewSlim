@@ -44,13 +44,15 @@ intellijPlatform {
             untilBuild = provider { null }
         }
     }
+    // from the release workflow's secrets (RELEASING.md); a secret that is not set arrives as an
+    // empty variable, which counts as unset, so the plugin is then published unsigned
     signing {
-        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
-        privateKey = providers.environmentVariable("PRIVATE_KEY")
-        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+        certificateChain = secret("CERTIFICATE_CHAIN")
+        privateKey = secret("PRIVATE_KEY")
+        password = secret("PRIVATE_KEY_PASSWORD")
     }
     publishing {
-        token = providers.environmentVariable("PUBLISH_TOKEN")
+        token = secret("PUBLISH_TOKEN")
     }
     // -PverifyIde=IC:2024.2.6 or IntellijIdea:2026.2.3 verifies against that one IDE (CI runs one per job: the IDEs do not
     // fit on one runner's disk); without it, every IDE the platform recommends for the range
@@ -68,10 +70,11 @@ intellijPlatform {
     }
 }
 
+fun secret(name: String) = providers.environmentVariable(name).filter { it.isNotBlank() }
+
 tasks {
-    named("publishPlugin") {
-        dependsOn("verifyPlugin")
-    }
+    // publishPlugin does not run verifyPlugin itself: every recommended IDE does not fit on one
+    // runner's disk, so the release workflow publishes only after the verify-plugin matrix passes
 
     // IDEA 2024.2.4 predates Java 25. On startup its bundled Gradle plugin (com.intellij.gradle)
     // reads JetBrains' current Gradle/JVM compatibility matrix, which now lists Java 25, and

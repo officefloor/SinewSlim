@@ -4,8 +4,10 @@ name: Verify plugin
 # to the newest). It matters because the extraction goes through ExtractMethodProcessor, an
 # implementation class that a newer platform may change. The IDEs together do not fit on one
 # runner's disk, so each is verified in its own job. It runs when the plugin or what it bundles
-# changes on main, and on demand, not on every pull request.
+# changes on main, on demand, and from a release before the plugin goes to the Marketplace; not
+# on every pull request.
 on:
+  workflow_call:
   push:
     branches: [main]
     paths:
