@@ -2,6 +2,8 @@ package net.officefloor.sinewslim.core;
 
 import java.util.List;
 
+import net.officefloor.sinewslim.facts.Seam;
+
 /**
  * The best segmentation of one method under one set of parameters, or why there is none.
  *
@@ -43,7 +45,7 @@ public record SlimResult(boolean applicable, boolean feasible, int width, int co
 	public int count(Binding b) {
 		int n = 0;
 		for (Seam s : cuts) {
-			if (s.binding(params) == b) {
+			if (params.binding(s) == b) {
 				n++;
 			}
 		}

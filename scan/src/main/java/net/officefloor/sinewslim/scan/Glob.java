@@ -1,4 +1,4 @@
-package net.officefloor.sinewslim.cli;
+package net.officefloor.sinewslim.scan;
 
 import java.util.List;
 import java.util.regex.Pattern;

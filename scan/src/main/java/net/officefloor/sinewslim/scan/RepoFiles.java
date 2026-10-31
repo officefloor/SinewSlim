@@ -1,4 +1,4 @@
-package net.officefloor.sinewslim.cli;
+package net.officefloor.sinewslim.scan;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,12 +17,12 @@ import java.util.stream.Stream;
  * {@code .gitignore} is honoured; anywhere else, every file under the root, hidden directories
  * left out.
  */
-final class RepoFiles {
+public final class RepoFiles {
 
 	private RepoFiles() {
 	}
 
-	static List<String> list(Path root) throws IOException {
+	public static List<String> list(Path root) throws IOException {
 		List<String> git = gitFiles(root);
 		if (git != null) {
 			return git;
@@ -43,7 +43,7 @@ final class RepoFiles {
 	}
 
 	/** The files git lists, or null when the root is not in a git work tree or git is not there. */
-	static List<String> gitFiles(Path root) {
+	public static List<String> gitFiles(Path root) {
 		try {
 			Process p = new ProcessBuilder("git", "-C", root.toString(), "ls-files", "-z", "--cached", "--others",
 					"--exclude-standard").redirectError(ProcessBuilder.Redirect.DISCARD).start();

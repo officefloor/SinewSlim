@@ -1,4 +1,4 @@
-package net.officefloor.sinewslim.core;
+package net.officefloor.sinewslim.facts;
 
 import java.util.List;
 
@@ -8,7 +8,7 @@ import java.util.List;
  * allowed. A block directly under an expression or a declaration is a lambda's body, and
  * nothing in it leaves the run.
  */
-final class Jumps {
+public final class Jumps {
 
 	private Jumps() {
 	}
@@ -18,7 +18,12 @@ final class Jumps {
 		boolean leaves;
 	}
 
-	static boolean ok(List<Stmt> run, Params p) {
+	/**
+	 * Whether a run of sibling statements can be moved.
+	 *
+	 * @param trailingReturn a return that ends the run is allowed
+	 */
+	public static boolean ok(List<Stmt> run, boolean trailingReturn) {
 		Acc acc = new Acc();
 		for (Stmt node : run) {
 			walk(node, false, false, false, acc);
@@ -29,7 +34,7 @@ final class Jumps {
 		if (acc.returns == 0) {
 			return true;
 		}
-		return p.trailingReturn() && acc.returns == 1 && run.get(run.size() - 1).kind() == StmtKind.RETURN;
+		return trailingReturn && acc.returns == 1 && run.get(run.size() - 1).kind() == StmtKind.RETURN;
 	}
 
 	private static void walk(Stmt node, boolean inLoop, boolean inSwitch, boolean inLambda, Acc acc) {

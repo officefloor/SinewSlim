@@ -1,7 +1,8 @@
 // The command line: scan (and, in phase 3, review, the hook and the PR comment).
 dependencies {
-    implementation(project(":javaparser"))
-    implementation(project(":config"))
+    implementation(project(":sinewslim-javaparser"))
+    implementation(project(":sinewslim-scan"))
+    implementation(project(":sinewslim-config"))
     implementation("info.picocli:picocli:4.7.7")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.20.2")
 }

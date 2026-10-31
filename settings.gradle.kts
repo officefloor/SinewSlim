@@ -8,4 +8,18 @@ pluginManagement {
 
 rootProject.name = "sinew-slim"
 
-include("core", "javaparser", "config", "cli", "intellij")
+// The libraries' projects carry their artifact names, so a composite build (OfficeFloorSlim's
+// includeBuild) substitutes net.officefloor.sinewslim:sinewslim-* without a substitution block.
+// Their directories keep the short names.
+val libraries = mapOf(
+    "sinewslim-facts" to "facts",
+    "sinewslim-core" to "core",
+    "sinewslim-javaparser" to "javaparser",
+    "sinewslim-config" to "config",
+    "sinewslim-scan" to "scan",
+)
+for ((name, dir) in libraries) {
+    include(name)
+    project(":$name").projectDir = file(dir)
+}
+include("cli", "intellij")

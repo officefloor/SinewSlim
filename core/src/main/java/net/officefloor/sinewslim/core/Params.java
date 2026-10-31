@@ -1,5 +1,7 @@
 package net.officefloor.sinewslim.core;
 
+import net.officefloor.sinewslim.facts.Seam;
+
 /**
  * Every number the search decides by. {@link #DEFAULTS} are SinewSlim's (DESIGN.md,
  * Configuration); {@link #STUDY} are the study's ({@code SPLIT.md}, Parameters), so a run can be
@@ -38,6 +40,41 @@ public record Params(int trigger, int target, int minPiece, int minSaving, int m
 
 	/** The study's defaults ({@code SPLIT.md}, Parameters; {@code split.py}, Params). */
 	public static final Params STUDY = DEFAULTS.toBuilder().minPiece(5).minSaving(3).maxInputs(3).countUnpacking(false).build();
+
+	/** The parameters' share of a seam: one each, and the premium for each beyond the soft limit. */
+	public int inputCost(Seam s) {
+		int k = s.inputs().size();
+		return softInputs < 0 ? k : k + inputPremium * Math.max(0, k - softInputs);
+	}
+
+	/** The worst-seam measure: what crosses, the soft-limit premium included. */
+	public int width(Seam s) {
+		return inputCost(s) + s.outputs().size();
+	}
+
+	/** The return values' share of a seam: one plain return, or a record's values. */
+	public int outputCost(Seam s) {
+		int k = s.outputs().size();
+		return k <= 1 ? outputWeight * k : multiOutputWeight * k;
+	}
+
+	/** A seam extracted as a method: its parameters, its returns, a name and a call site. */
+	public int cost(Seam s) {
+		return inputCost(s) + outputCost(s) + pieceCost;
+	}
+
+	/** Whether a seam is within the limits on parameters and return values. */
+	public boolean feasible(Seam s) {
+		return (maxOutputs < 0 || s.outputs().size() <= maxOutputs) && (maxInputs < 0 || s.inputs().size() <= maxInputs);
+	}
+
+	/** What a piece extracted at a seam depends on in its class. */
+	public Binding binding(Seam s) {
+		if (!s.fieldsWritten().isEmpty() || s.ownCalls() > 0 || (lockOnAnyField && !s.fieldsRead().isEmpty())) {
+			return Binding.LOCKED;
+		}
+		return s.fieldsRead().isEmpty() ? Binding.FREE : Binding.BOUND;
+	}
 
 	/** The same search restricted to whole if, loop, try and switch statements. */
 	public Params structural() {

@@ -1,4 +1,4 @@
-package net.officefloor.sinewslim.core;
+package net.officefloor.sinewslim.facts;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,19 +8,24 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /** A method's facts indexed for the many seams a search asks for ({@code split.py}, Method). */
-final class MethodIndex {
+public final class MethodIndex {
 
 	/** A variable's lines, with its literal declaration line (or -1) and every line it is touched on. */
 	record IndexedVar(Var var, int decl, int[] touches) {
 	}
 
-	final MethodFacts facts;
-	final boolean freeParams;
-	final int[] code;
-	final List<IndexedVar> vars = new ArrayList<>();
+	private final MethodFacts facts;
+	private final boolean freeParams;
+	private final int[] code;
+	private final List<IndexedVar> vars = new ArrayList<>();
 	private final Map<Long, Seam> seams = new HashMap<>();
 
-	MethodIndex(MethodFacts facts, boolean freeParams) {
+	/**
+	 * @param facts      the method's facts
+	 * @param freeParams a parameter handed to a run unchanged is not one of its inputs: the
+	 *                   framework injects it (it is still listed as passed)
+	 */
+	public MethodIndex(MethodFacts facts, boolean freeParams) {
 		this.facts = facts;
 		this.freeParams = freeParams;
 		TreeSet<Integer> lines = new TreeSet<>();
@@ -73,12 +78,22 @@ final class MethodIndex {
 		}
 	}
 
+	public MethodFacts facts() {
+		return facts;
+	}
+
+	/** The method's code lines: those its statement tree and its signature cover. */
+	public int codeLines() {
+		return code.length;
+	}
+
 	/** The code lines in [lo, hi]. */
-	int lines(int lo, int hi) {
+	public int lines(int lo, int hi) {
 		return bisectRight(code, hi) - bisectLeft(code, lo);
 	}
 
-	Seam seam(int lo, int hi) {
+	/** What crosses the boundary of the run of lines [lo, hi]. */
+	public Seam seam(int lo, int hi) {
 		return seams.computeIfAbsent(((long) lo << 32) | (hi & 0xffffffffL), k -> computeSeam(lo, hi));
 	}
 
@@ -138,8 +153,12 @@ final class MethodIndex {
 		return new Seam(lo, hi, inputs, outputs, moved, fread, fwrit, ownCalls, passed);
 	}
 
-	/** Whether what stays behind writes a field or calls the class's own methods outside the cuts. */
-	boolean remainderLocked(List<Seam> cuts, Params p) {
+	/**
+	 * Whether what stays behind writes a field or calls the class's own methods outside the cuts.
+	 *
+	 * @param lockOnAnyField a field read outside the cuts binds it too
+	 */
+	public boolean remainderLocked(List<Seam> cuts, boolean lockOnAnyField) {
 		for (int x : facts.ownCallLines()) {
 			if (outside(x, cuts)) {
 				return true;
@@ -157,7 +176,7 @@ final class MethodIndex {
 					}
 				}
 			}
-			if (p.lockOnAnyField()) {
+			if (lockOnAnyField) {
 				for (int x : v.refs()) {
 					if (outside(x, cuts)) {
 						return true;

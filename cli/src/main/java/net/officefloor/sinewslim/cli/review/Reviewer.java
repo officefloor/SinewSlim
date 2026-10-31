@@ -12,7 +12,6 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import net.officefloor.sinewslim.cli.Glob;
 import net.officefloor.sinewslim.cli.report.MethodReport;
 import net.officefloor.sinewslim.cli.report.ScanReport;
 import net.officefloor.sinewslim.config.Config;
@@ -20,6 +19,7 @@ import net.officefloor.sinewslim.core.Assessment;
 import net.officefloor.sinewslim.javaparser.JavaFacts;
 import net.officefloor.sinewslim.javaparser.MethodUnit;
 import net.officefloor.sinewslim.javaparser.ParsedFile;
+import net.officefloor.sinewslim.scan.Glob;
 
 /**
  * Reviews the methods a change touches (DESIGN.md, Review). A method is touched when a changed

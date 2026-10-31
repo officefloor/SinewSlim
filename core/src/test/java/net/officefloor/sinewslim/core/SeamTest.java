@@ -8,6 +8,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import net.officefloor.sinewslim.facts.Seam;
+
 /** The cost of one seam under the limits: the soft parameter premium above all, which split.py does not have. */
 class SeamTest {
 
@@ -20,41 +22,41 @@ class SeamTest {
 	@Test
 	void withoutASoftLimitEveryValueCostsOne() {
 		Params p = Params.DEFAULTS;
-		assertEquals(5, seam(4, 1).width(p));
-		assertEquals(4 + 1 + 1, seam(4, 1).cost(p));
-		assertEquals(3 * 2 + 2 + 1, seam(2, 2).cost(p.records()));
+		assertEquals(5, p.width(seam(4, 1)));
+		assertEquals(4 + 1 + 1, p.cost(seam(4, 1)));
+		assertEquals(3 * 2 + 2 + 1, p.records().cost(seam(2, 2)));
 	}
 
 	@Test
 	void eachParameterBeyondTheSoftLimitCostsThePremium() {
 		Params p = Params.DEFAULTS.toBuilder().softInputs(3).inputPremium(2).build();
-		assertEquals(3, seam(3, 0).inputCost(p));
-		assertEquals(4 + 2, seam(4, 0).inputCost(p));
-		assertEquals(5 + 2 * 2, seam(5, 0).inputCost(p));
-		assertEquals(9 + 1, seam(5, 1).width(p));
-		assertEquals(9 + 1 + 1, seam(5, 1).cost(p));
+		assertEquals(3, p.inputCost(seam(3, 0)));
+		assertEquals(4 + 2, p.inputCost(seam(4, 0)));
+		assertEquals(5 + 2 * 2, p.inputCost(seam(5, 0)));
+		assertEquals(9 + 1, p.width(seam(5, 1)));
+		assertEquals(9 + 1 + 1, p.cost(seam(5, 1)));
 	}
 
 	@Test
 	void theHardLimitsDecideFeasibility() {
 		Params p = Params.DEFAULTS;
-		assertTrue(seam(5, 1).feasible(p));
-		assertFalse(seam(6, 0).feasible(p));
-		assertFalse(seam(1, 2).feasible(p));
-		assertTrue(seam(1, 2).feasible(p.records()));
-		assertTrue(seam(6, 0).feasible(p.unlimitedInputs()));
+		assertTrue(p.feasible(seam(5, 1)));
+		assertFalse(p.feasible(seam(6, 0)));
+		assertFalse(p.feasible(seam(1, 2)));
+		assertTrue(p.records().feasible(seam(1, 2)));
+		assertTrue(p.unlimitedInputs().feasible(seam(6, 0)));
 	}
 
 	@Test
 	void bindingFollowsFieldsAndOwnCalls() {
 		Params p = Params.DEFAULTS;
-		assertEquals(Binding.FREE, seam(1, 0).binding(p));
+		assertEquals(Binding.FREE, p.binding(seam(1, 0)));
 		Seam reads = new Seam(1, 5, List.of(), List.of(), List.of(), List.of("cfg"), List.of(), 0, List.of());
-		assertEquals(Binding.BOUND, reads.binding(p));
-		assertEquals(Binding.LOCKED, reads.binding(p.toBuilder().lockOnAnyField(true).build()));
+		assertEquals(Binding.BOUND, p.binding(reads));
+		assertEquals(Binding.LOCKED, p.toBuilder().lockOnAnyField(true).build().binding(reads));
 		Seam writes = new Seam(1, 5, List.of(), List.of(), List.of(), List.of(), List.of("cache"), 0, List.of());
-		assertEquals(Binding.LOCKED, writes.binding(p));
+		assertEquals(Binding.LOCKED, p.binding(writes));
 		Seam calls = new Seam(1, 5, List.of(), List.of(), List.of(), List.of(), List.of(), 1, List.of());
-		assertEquals(Binding.LOCKED, calls.binding(p));
+		assertEquals(Binding.LOCKED, p.binding(calls));
 	}
 }

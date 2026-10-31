@@ -3,6 +3,8 @@ package net.officefloor.sinewslim.core;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.officefloor.sinewslim.facts.Seam;
+
 /**
  * The words for a proposal and its pieces, shared by every surface (the reports, the review, the
  * IDE) so they all say the same thing.
@@ -91,7 +93,7 @@ public final class Pieces {
 
 	/** Where the piece can live: {@code static}, {@code static if passed: cfg}, or {@code instance: writes cache}. */
 	public static String binding(Seam s, Params p, boolean parameteriseFieldReads) {
-		Binding b = s.binding(p);
+		Binding b = p.binding(s);
 		if (b == Binding.FREE) {
 			return "static";
 		}

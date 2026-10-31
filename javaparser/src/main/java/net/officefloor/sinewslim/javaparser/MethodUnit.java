@@ -2,7 +2,8 @@ package net.officefloor.sinewslim.javaparser;
 
 import java.util.List;
 
-import net.officefloor.sinewslim.core.MethodFacts;
+import net.officefloor.sinewslim.facts.ExtraFacts;
+import net.officefloor.sinewslim.facts.MethodFacts;
 
 /**
  * One callable with a body, where it is, and its facts.
@@ -17,9 +18,10 @@ import net.officefloor.sinewslim.core.MethodFacts;
  * @param annotations the annotations on it and on each type around it, as written, innermost
  *                    first: how a framework marks its functions
  * @param facts       what the search reads
+ * @param extras      what the extractors the parse was given read, beside the facts
  */
 public record MethodUnit(String type, String name, String signature, int declLine, int nameLine, int endLine,
-		List<String> annotations, MethodFacts facts) {
+		List<String> annotations, MethodFacts facts, ExtraFacts extras) {
 
 	public MethodUnit {
 		annotations = List.copyOf(annotations);

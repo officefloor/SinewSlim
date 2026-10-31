@@ -1,4 +1,4 @@
-package net.officefloor.sinewslim.core;
+package net.officefloor.sinewslim.facts;
 
 /**
  * What a node of the statement tree is. The order is the study's facts schema (schema 3), so a

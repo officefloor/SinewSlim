@@ -5,6 +5,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
+import net.officefloor.sinewslim.facts.MethodFacts;
+import net.officefloor.sinewslim.facts.MethodIndex;
+import net.officefloor.sinewslim.facts.Seam;
+
 /**
  * Finds the cheapest set of contiguous statement runs whose extraction brings a method, and every
  * piece, to the target length ({@code SPLIT.md}; {@code split.py}, split).
@@ -22,7 +26,7 @@ public final class Slimmer {
 	private static Comparator<Seam> cutOrder(Params p) {
 		return Comparator.comparingInt(Seam::lo).thenComparingInt(Seam::hi)
 				.thenComparingInt((Seam s) -> s.inputs().size()).thenComparingInt(s -> s.outputs().size())
-				.thenComparing(s -> s.binding(p).name().toLowerCase());
+				.thenComparing(s -> p.binding(s).name().toLowerCase());
 	}
 
 	public static SlimResult slim(MethodFacts facts, Params p) {
@@ -32,7 +36,7 @@ public final class Slimmer {
 	/** The best segmentation that uses none of the {@code excluded} runs: the pieces the developer skipped. */
 	public static SlimResult slim(MethodFacts facts, Params p, Set<Run> excluded) {
 		MethodIndex m = new MethodIndex(facts, p.freeParams());
-		int total = facts.length() > 0 ? facts.length() : m.code.length;
+		int total = facts.length() > 0 ? facts.length() : m.codeLines();
 		if (total < p.trigger()) {
 			return new SlimResult(false, true, 0, 0, total, List.of(), List.of(), false, p);
 		}
@@ -53,7 +57,7 @@ public final class Slimmer {
 		List<Seam> cuts = new ArrayList<>(best.cuts());
 		cuts.sort(cutOrder(p));
 		return new SlimResult(true, true, best.width(), best.cost(), total - (kidsTotal - best.rem()), cuts,
-				pieceLines(m, cuts), m.remainderLocked(cuts, p), p);
+				pieceLines(m, cuts), m.remainderLocked(cuts, p.lockOnAnyField()), p);
 	}
 
 	/**

@@ -15,8 +15,8 @@ import net.officefloor.sinewslim.core.Assessment.Status;
 import net.officefloor.sinewslim.core.Assessor;
 import net.officefloor.sinewslim.core.Binding;
 import net.officefloor.sinewslim.core.Params;
-import net.officefloor.sinewslim.core.Seam;
 import net.officefloor.sinewslim.core.SlimResult;
+import net.officefloor.sinewslim.facts.Seam;
 
 /** Source in, facts and an assessment out, on small methods whose answer can be read by eye. */
 class JavaFactsTest {
@@ -142,7 +142,7 @@ class JavaFactsTest {
 		for (Seam s : r.cuts()) {
 			assertTrue(s.inputs().size() <= 2, () -> "a step needs at most two values: " + s);
 			assertTrue(s.outputs().size() <= 1);
-			assertEquals(Binding.FREE, s.binding(r.params()));
+			assertEquals(Binding.FREE, r.params().binding(s));
 		}
 	}
 

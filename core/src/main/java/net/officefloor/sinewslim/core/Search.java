@@ -7,6 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.officefloor.sinewslim.facts.Jumps;
+import net.officefloor.sinewslim.facts.MethodIndex;
+import net.officefloor.sinewslim.facts.Seam;
+import net.officefloor.sinewslim.facts.Stmt;
+
 /**
  * The bottom-up dynamic program over the statement tree ({@code split.py}, the search). For each
  * sequence, walk its statements in order; at each, either keep it in the remainder (as it is, or
@@ -170,10 +175,10 @@ final class Search {
 			Stmt kid = kids.get(i);
 			if (!p.structuralOnly() || kid.kind().structural()) {
 				// a single statement, as it is or reduced from inside, then extracted whole
-				if (p.ignoreJumps() || Jumps.ok(List.of(kid), p)) {
+				if (p.ignoreJumps() || Jumps.ok(List.of(kid), p.trailingReturn())) {
 					Seam sm = m.seam(kid.start(), kid.end());
-					if (sm.feasible(p) && !excluded.contains(Run.of(sm))) {
-						int w = sm.width(p), c = sm.cost(p);
+					if (p.feasible(sm) && !excluded.contains(Run.of(sm))) {
+						int w = p.width(sm), c = p.cost(sm);
 						for (Option o : opts.get(i)) {
 							if (p.minPiece() <= o.rem && o.rem <= p.target() && o.rem - 1 >= p.minSaving()) {
 								for (Option st : List.copyOf(at.get(i).values())) {
@@ -198,14 +203,14 @@ final class Search {
 				if (lines < p.minPiece() || lines - 1 < p.minSaving()) {
 					continue;
 				}
-				if (!p.ignoreJumps() && !Jumps.ok(kids.subList(j, i + 1), p)) {
+				if (!p.ignoreJumps() && !Jumps.ok(kids.subList(j, i + 1), p.trailingReturn())) {
 					continue;
 				}
 				Seam sm = m.seam(kids.get(j).start(), kid.end());
-				if (!sm.feasible(p) || excluded.contains(Run.of(sm))) {
+				if (!p.feasible(sm) || excluded.contains(Run.of(sm))) {
 					continue;
 				}
-				int w = sm.width(p), c = sm.cost(p);
+				int w = p.width(sm), c = p.cost(sm);
 				for (Option st : at.get(j).values()) {
 					push(next, new Option(st.rem + left(sm), Math.max(st.width, w), st.cost + c, st.pieces + 1,
 							append(st.cuts, sm)));

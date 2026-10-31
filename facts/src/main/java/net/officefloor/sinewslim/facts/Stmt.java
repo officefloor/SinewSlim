@@ -1,4 +1,4 @@
-package net.officefloor.sinewslim.core;
+package net.officefloor.sinewslim.facts;
 
 import java.util.List;
 

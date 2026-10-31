@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Locale;
 
 import net.officefloor.sinewslim.core.Binding;
-import net.officefloor.sinewslim.core.Seam;
 import net.officefloor.sinewslim.core.SlimResult;
+import net.officefloor.sinewslim.facts.Seam;
 
 /** One row per method, every method, for a spreadsheet; the cuts in one column as {@code lo-hi:inputs/outputs/binding}. */
 final class CsvReport implements ReportWriter {
@@ -25,7 +25,7 @@ final class CsvReport implements ReportWriter {
 			List<String> cuts = new ArrayList<>();
 			for (Seam s : p.cuts()) {
 				cuts.add(s.lo() + "-" + s.hi() + ":" + s.inputs().size() + "/" + s.outputs().size() + "/"
-						+ s.binding(p.params()).name().toLowerCase(Locale.ROOT));
+						+ p.params().binding(s).name().toLowerCase(Locale.ROOT));
 			}
 			row(out, List.of(m.path(), m.type(), m.signature(), str(m.nameLine()), str(m.endLine()), str(m.length()),
 					str(m.headroom()), m.status().name().toLowerCase(Locale.ROOT),

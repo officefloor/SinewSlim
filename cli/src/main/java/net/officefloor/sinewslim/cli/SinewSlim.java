@@ -132,7 +132,7 @@ public final class SinewSlim implements Callable<Integer> {
 			}
 			Config config = options.load();
 			int n = threads != null ? threads : Runtime.getRuntime().availableProcessors();
-			ScanReport report = Scanner.scan(options.root(), config, n, version());
+			ScanReport report = HealthScan.scan(options.root(), config, n, version());
 			try (Writer w = output(out)) {
 				f.writer().write(report, near, w);
 			}
@@ -160,7 +160,7 @@ public final class SinewSlim implements Callable<Integer> {
 		@Override
 		public Integer call() throws IOException {
 			Config config = options.load();
-			ScanReport report = Scanner.scan(options.root(), config, Runtime.getRuntime().availableProcessors(), version());
+			ScanReport report = HealthScan.scan(options.root(), config, Runtime.getRuntime().availableProcessors(), version());
 			Map<String, Object> doc = new LinkedHashMap<>();
 			doc.put("tool", "sinew-slim");
 			doc.put("version", report.version());

@@ -79,9 +79,12 @@ without SinewSlim depending on the IDE everywhere else.
 ```
 SinewSlim/
   settings.gradle.kts
-  core/        pure: the facts model, the seam, the search, the cost, the result. No I/O, no parser.
-  javaparser/  facts from JavaParser's syntax tree (the study's LiveWidth.java, taken over)
-  config/      .sinew-slim.yml: load, defaults, validation, the effective-config dump
+  facts/       sinewslim-facts: the facts model and the seam's roles (schema 3), the extra facts. No I/O.
+  core/        sinewslim-core: the cost, the search, the result, over the facts. No I/O, no parser.
+  javaparser/  sinewslim-javaparser: facts from JavaParser's syntax tree (the study's LiveWidth.java,
+               taken over), and the extractors a consumer adds
+  config/      sinewslim-config: .sinew-slim.yml: load, defaults, validation, the effective-config dump
+  scan/        sinewslim-scan: a repository's files, include and exclude, read in parallel
   cli/         scan, review, hook, comment; git; report formats; providers (GitHub, GitLab)
   intellij/    the plugin: inspection, overlays, extraction through the IDE
   ci/          gitlab-ci.yml, Jenkinsfile (as ImpactGate)
@@ -90,9 +93,17 @@ SinewSlim/
   doc/         the algorithm, the configuration, each surface
 ```
 
-`core` depends on nothing. `javaparser` and the plugin each turn source into the same `core`
-facts; everything above that line is shared. That is the one rule that keeps the three
-surfaces agreeing.
+`facts` depends on nothing, and `core` only on `facts`. `javaparser` and the plugin each turn
+source into the same facts; everything above that line is shared. That is the one rule that
+keeps the three surfaces agreeing.
+
+The five libraries publish to Maven Central as `net.officefloor.sinewslim:<project>`, and each
+Gradle project carries its artifact name (`:sinewslim-core` in `core/`), so a composite build
+(OfficeFloorSlim's) substitutes them without a substitution block. Each has its own package
+(`net.officefloor.sinewslim.facts`, `.core`, `.javaparser`, `.config`, `.scan`): no package is
+split across two jars. `facts` and `scan` exist for consumers that price the same methods
+another way: OfficeFloorSlim reads the facts and the seams but not SinewSlim's cost, and scans
+other files beside the Java.
 
 ## Configuration
 
@@ -190,6 +201,20 @@ Per method, from either parser:
   call).
 
 The facts are the study's live-width facts, schema 3, as a Java record set rather than JSON.
+`MethodFacts.SCHEMA` carries the number, continuing the study's; it changes whenever a field's
+meaning does, so a consumer can tell which facts it was given.
+
+**Extra facts.** A consumer reads more than the schema without changing it. A
+`JavaFacts.Extractor` reads a callable's syntax tree and returns one fact under its own
+`FactKey`; the parse runs every extractor it is given, and each method's `MethodUnit.extras()`
+holds what they read. Keys compare by identity, so two consumers never collide, and SinewSlim's
+search reads none of them: an extractor cannot move a slim cost, nor parity with `split.py`.
+Files other than Java (configuration, wiring) are read through `scan` with the consumer's own
+reader.
+
+**The seam's roles and its cost are apart.** `Seam` (in `facts`) says what crosses a run's
+boundary; `Params` (in `core`) prices it as an extracted method: `inputCost`, `outputCost`,
+`width`, `cost`, `feasible` and `binding`.
 
 ### The seam
 

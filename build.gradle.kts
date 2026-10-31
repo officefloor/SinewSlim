@@ -57,7 +57,7 @@ subprojects {
 // Portal with ./gradlew publishToMavenCentral, given ORG_GRADLE_PROJECT_mavenCentralUsername,
 // ORG_GRADLE_PROJECT_mavenCentralPassword, ORG_GRADLE_PROJECT_signingInMemoryKey and
 // ORG_GRADLE_PROJECT_signingInMemoryKeyPassword.
-val libraries = setOf("core", "javaparser", "config")
+val libraries = setOf("sinewslim-facts", "sinewslim-core", "sinewslim-javaparser", "sinewslim-config", "sinewslim-scan")
 val signing = providers.gradleProperty("signingInMemoryKey").isPresent
 
 configure(subprojects.filter { it.name in libraries }) {
@@ -65,14 +65,14 @@ configure(subprojects.filter { it.name in libraries }) {
 
     configure<MavenPublishBaseExtension> {
         configure(JavaLibrary(javadocJar = JavadocJar.Javadoc(), sourcesJar = true))
-        coordinates(project.group.toString(), "sinewslim-${project.name}", project.version.toString())
+        coordinates(project.group.toString(), project.name, project.version.toString())
         publishToMavenCentral()
         // Central refuses an unsigned bundle; the dry run has no key and is not signed
         if (signing) {
             signAllPublications()
         }
         pom {
-            name.set("SinewSlim ${project.name}")
+            name.set("SinewSlim ${project.name.removePrefix("sinewslim-")}")
             description.set(provider { project.description })
             url.set("https://github.com/officefloor/SinewSlim")
             inceptionYear.set("2026")

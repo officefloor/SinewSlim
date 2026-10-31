@@ -5,6 +5,10 @@ import java.util.Set;
 
 import net.officefloor.sinewslim.core.Assessment.Obstacle;
 import net.officefloor.sinewslim.core.Assessment.Status;
+import net.officefloor.sinewslim.facts.MethodFacts;
+import net.officefloor.sinewslim.facts.MethodIndex;
+import net.officefloor.sinewslim.facts.Stmt;
+import net.officefloor.sinewslim.facts.StmtKind;
 
 /**
  * Reads a method under the default search and the variants beside it, and gives its status

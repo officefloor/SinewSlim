@@ -15,8 +15,8 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":javaparser"))
-    implementation(project(":config"))
+    implementation(project(":sinewslim-javaparser"))
+    implementation(project(":sinewslim-config"))
 
     intellijPlatform {
         create(

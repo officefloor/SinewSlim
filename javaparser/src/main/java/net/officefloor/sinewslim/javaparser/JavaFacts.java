@@ -66,10 +66,12 @@ import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.stmt.WhileStmt;
 import com.github.javaparser.ast.stmt.YieldStmt;
 
-import net.officefloor.sinewslim.core.MethodFacts;
-import net.officefloor.sinewslim.core.Stmt;
-import net.officefloor.sinewslim.core.StmtKind;
-import net.officefloor.sinewslim.core.Var;
+import net.officefloor.sinewslim.facts.ExtraFacts;
+import net.officefloor.sinewslim.facts.FactKey;
+import net.officefloor.sinewslim.facts.MethodFacts;
+import net.officefloor.sinewslim.facts.Stmt;
+import net.officefloor.sinewslim.facts.StmtKind;
+import net.officefloor.sinewslim.facts.Var;
 
 /**
  * The facts of every method in a Java source file, from JavaParser's syntax tree. Taken over from
@@ -143,8 +145,30 @@ public final class JavaFacts {
 		}
 	}
 
+	/**
+	 * A consumer's own facts about a callable, read from its syntax tree beside the shared ones
+	 * and kept in {@link MethodUnit#extras()} under its key. It runs once per callable, on many
+	 * threads at once, and returns null when it has nothing to say.
+	 *
+	 * @param <T> the type of the fact
+	 */
+	public interface Extractor<T> {
+
+		FactKey<T> key();
+
+		/**
+		 * @param callable a method, a constructor or a record's compact constructor, with a body
+		 */
+		T extract(BodyDeclaration<?> callable);
+	}
+
 	/** Parse a file's source and gather the facts of each of its methods. */
 	public static ParsedFile parse(String path, String source) {
+		return parse(path, source, List.of());
+	}
+
+	/** Parse a file's source and gather the facts of each of its methods, and what each extractor reads. */
+	public static ParsedFile parse(String path, String source, List<Extractor<?>> extractors) {
 		CompilationUnit cu = null;
 		String problem = null;
 		for (LanguageLevel level : LEVELS) {
@@ -173,7 +197,7 @@ public final class JavaFacts {
 			if (n instanceof MethodDeclaration md && md.getBody().isEmpty()) {
 				continue; // no body, not a unit
 			}
-			methods.add(measure(n));
+			methods.add(measure(n, extras((BodyDeclaration<?>) n, extractors)));
 		}
 		return new ParsedFile(path, null, methods);
 	}
@@ -218,7 +242,22 @@ public final class JavaFacts {
 		}
 	}
 
-	static MethodUnit measure(Node decl) {
+	static ExtraFacts extras(BodyDeclaration<?> callable, List<Extractor<?>> extractors) {
+		if (extractors.isEmpty()) {
+			return ExtraFacts.NONE;
+		}
+		ExtraFacts.Builder b = ExtraFacts.builder();
+		for (Extractor<?> x : extractors) {
+			put(b, x, callable);
+		}
+		return b.build();
+	}
+
+	private static <T> void put(ExtraFacts.Builder b, Extractor<T> x, BodyDeclaration<?> callable) {
+		b.put(x.key(), x.extract(callable));
+	}
+
+	static MethodUnit measure(Node decl, ExtraFacts extras) {
 		SimpleName name;
 		NodeList<Parameter> params;
 		Node body;
@@ -351,7 +390,7 @@ public final class JavaFacts {
 		MethodFacts facts = new MethodFacts(declLine, tree(body), vars, loops, ownCallLines(decl, own),
 				nloc(decl, name));
 		return new MethodUnit(typeName(decl), name.asString(), signature, declLine, nameLine, endLine(decl),
-				annotations(decl), facts);
+				annotations(decl), facts, extras);
 	}
 
 	// ------------------------------------------------------------------------------------------

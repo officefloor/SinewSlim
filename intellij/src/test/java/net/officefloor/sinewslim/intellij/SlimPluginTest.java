@@ -187,8 +187,8 @@ public class SlimPluginTest extends LightJavaCodeInsightFixtureTestCase {
 		// lines that hold no whole statement: the IDE has nothing to extract
 		SlimService.MethodAnalysis a = Psi.analysis(method("longOne"));
 		Pieces.Piece real = Pieces.of(a.assessment().proposal(), true).get(0);
-		net.officefloor.sinewslim.core.Seam s = real.seam();
-		net.officefloor.sinewslim.core.Seam bogus = new net.officefloor.sinewslim.core.Seam(1, 1, s.inputs(), s.outputs(),
+		net.officefloor.sinewslim.facts.Seam s = real.seam();
+		net.officefloor.sinewslim.facts.Seam bogus = new net.officefloor.sinewslim.facts.Seam(1, 1, s.inputs(), s.outputs(),
 				s.moved(), s.fieldsRead(), s.fieldsWritten(), s.ownCalls(), s.passed());
 		Pieces.Piece p = new Pieces.Piece(bogus, real.lines(), real.saves(), real.inputs(), real.passed(), real.binding());
 		assertNotNull(SlimExtractor.extract(getProject(), myFixture.getEditor(), method("longOne"), p, "nothing"));

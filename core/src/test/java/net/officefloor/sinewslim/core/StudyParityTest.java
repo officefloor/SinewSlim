@@ -25,6 +25,12 @@ import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import net.officefloor.sinewslim.facts.MethodFacts;
+import net.officefloor.sinewslim.facts.Seam;
+import net.officefloor.sinewslim.facts.Stmt;
+import net.officefloor.sinewslim.facts.StmtKind;
+import net.officefloor.sinewslim.facts.Var;
+
 /**
  * The core is accepted when it reproduces the study's {@code split.py} exactly (DESIGN.md,
  * Testing). The parity data is written in the study repository by
@@ -33,7 +39,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * <p>
  * The committed subset is read on every build. The full export is read when its path is given:
- * {@code ./gradlew :core:test -Dsinewslim.parity.full=/path/split-golden.jsonl.gz}.
+ * {@code ./gradlew :sinewslim-core:test -Dsinewslim.parity.full=/path/split-golden.jsonl.gz}.
  */
 class StudyParityTest {
 
@@ -146,7 +152,7 @@ class StudyParityTest {
 		List<String> gc = new ArrayList<>(), wc = new ArrayList<>();
 		for (Seam s : got.cuts()) {
 			gc.add(s.lo() + "-" + s.hi() + ":" + s.inputs().size() + "/" + s.outputs().size() + "/"
-					+ s.binding(got.params()).name().toLowerCase());
+					+ got.params().binding(s).name().toLowerCase());
 		}
 		for (JsonNode c : want.get("cuts")) {
 			wc.add(c.get(0).asInt() + "-" + c.get(1).asInt() + ":" + c.get(2).asInt() + "/" + c.get(3).asInt() + "/"

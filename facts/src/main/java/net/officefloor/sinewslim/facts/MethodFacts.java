@@ -1,11 +1,13 @@
-package net.officefloor.sinewslim.core;
+package net.officefloor.sinewslim.facts;
 
 import java.util.Arrays;
 import java.util.List;
 
 /**
  * Everything the search reads about one method. A fact producer (JavaParser outside the IDE, the
- * IDE's own tree inside it) fills it; the core never sees source.
+ * IDE's own tree inside it) fills it; the core never sees source. The shape is the study's
+ * live-width facts, numbered as they are ({@link #SCHEMA}); what a consumer reads beyond it goes in
+ * {@link ExtraFacts}, not here.
  *
  * @param declLine      the declaration's first line (its annotations and modifiers included)
  * @param body          the statement tree of the body: a sequence
@@ -17,6 +19,12 @@ import java.util.List;
  *                      on it; 0 to take the lines the statement tree covers instead
  */
 public record MethodFacts(int declLine, Stmt body, List<Var> vars, List<int[]> loops, int[] ownCallLines, int length) {
+
+	/**
+	 * The facts' schema, continuing the study's numbering: its live-width facts are schema 3. It
+	 * changes whenever a field's meaning does, so a consumer can tell which facts it was given.
+	 */
+	public static final int SCHEMA = 3;
 
 	public MethodFacts {
 		vars = List.copyOf(vars);

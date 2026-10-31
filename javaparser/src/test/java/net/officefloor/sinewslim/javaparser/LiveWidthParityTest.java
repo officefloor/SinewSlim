@@ -22,9 +22,9 @@ import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import net.officefloor.sinewslim.core.MethodFacts;
-import net.officefloor.sinewslim.core.Stmt;
-import net.officefloor.sinewslim.core.Var;
+import net.officefloor.sinewslim.facts.MethodFacts;
+import net.officefloor.sinewslim.facts.Stmt;
+import net.officefloor.sinewslim.facts.Var;
 
 /**
  * The facts are the study's {@code LiveWidth.java} facts, taken over: on the same source they
@@ -33,7 +33,7 @@ import net.officefloor.sinewslim.core.Var;
  *
  * <pre>
  * java -cp divergence-measurer.jar net.officefloor.divergence.LiveWidth --root DIR --files LIST --out FACTS.json.gz
- * ./gradlew :javaparser:test -Dsinewslim.livewidth.facts=FACTS.json.gz -Dsinewslim.livewidth.root=DIR
+ * ./gradlew :sinewslim-javaparser:test -Dsinewslim.livewidth.facts=FACTS.json.gz -Dsinewslim.livewidth.root=DIR
  * </pre>
  *
  * Without the two properties the test does nothing. Files the two parse at different language

@@ -1,9 +1,10 @@
-package net.officefloor.sinewslim.core;
+package net.officefloor.sinewslim.facts;
 
 import java.util.List;
 
 /**
- * What crosses the boundary of a run of statements if it is extracted.
+ * What crosses the boundary of a run of statements if it is extracted: the roles only. What the
+ * crossing costs is the consumer's ({@code sinewslim-core} prices it as extracted methods).
  *
  * @param lo            the run's first line
  * @param hi            the run's last line
@@ -30,35 +31,4 @@ public record Seam(int lo, int hi, List<String> inputs, List<String> outputs, Li
 		passed = List.copyOf(passed);
 	}
 
-	/** The parameters' share of the seam: one each, and the premium for each beyond the soft limit. */
-	public int inputCost(Params p) {
-		int k = inputs.size();
-		return p.softInputs() < 0 ? k : k + p.inputPremium() * Math.max(0, k - p.softInputs());
-	}
-
-	/** The worst-seam measure: what crosses, the soft-limit premium included. */
-	public int width(Params p) {
-		return inputCost(p) + outputs.size();
-	}
-
-	public int outputCost(Params p) {
-		int k = outputs.size();
-		return k <= 1 ? p.outputWeight() * k : p.multiOutputWeight() * k;
-	}
-
-	public int cost(Params p) {
-		return inputCost(p) + outputCost(p) + p.pieceCost();
-	}
-
-	public boolean feasible(Params p) {
-		return (p.maxOutputs() < 0 || outputs.size() <= p.maxOutputs())
-				&& (p.maxInputs() < 0 || inputs.size() <= p.maxInputs());
-	}
-
-	public Binding binding(Params p) {
-		if (!fieldsWritten.isEmpty() || ownCalls > 0 || (p.lockOnAnyField() && !fieldsRead.isEmpty())) {
-			return Binding.LOCKED;
-		}
-		return fieldsRead.isEmpty() ? Binding.FREE : Binding.BOUND;
-	}
 }

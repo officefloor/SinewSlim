@@ -1,4 +1,4 @@
-package net.officefloor.sinewslim.cli;
+package net.officefloor.sinewslim.scan;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
