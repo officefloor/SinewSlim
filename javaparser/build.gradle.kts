@@ -1,4 +1,5 @@
 // The facts from Java source, by JavaParser's syntax tree. No symbol solver: syntax and lexical scope only.
+description = "SinewSlim facts from Java source, by JavaParser"
 dependencies {
     api(project(":core"))
     // as the study's measurer (concentration-divergence-study/measurer/pom.xml)
